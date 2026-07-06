@@ -1,7 +1,7 @@
 # database/models/temp_models.py
-from typing import Optional, List
-from sqlalchemy import ForeignKey, String, Text, Numeric, BigInteger
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import Optional
+from sqlalchemy import String, Text, Numeric, BigInteger
+from sqlalchemy.orm import Mapped, mapped_column
 from database.models.base import Base
 
 
