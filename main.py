@@ -6,8 +6,7 @@ from aiogram.enums import ParseMode
 from config import config
 from database.connection import async_session, init_db
 
-from handlers.admin import admin_group_router
-from handlers.user import user_router
+from handlers import routers as all_routers
 from middlewares.db import DbSessionMiddleware
 from aiogram.fsm.storage.memory import MemoryStorage
 
@@ -27,7 +26,7 @@ async def main():
 
     dp.update.middleware(DbSessionMiddleware(session_pool=async_session))
 
-    dp.include_routers(admin_group_router, user_router)
+    dp.include_routers(all_routers)
 
     try:
         await dp.start_polling(bot)
@@ -37,3 +36,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+    

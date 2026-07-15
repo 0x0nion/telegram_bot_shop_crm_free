@@ -3,6 +3,7 @@ from typing import Optional
 from sqlalchemy import ForeignKey, String, Text, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from database.models import Category
 from database.models.base import Base
 
 
