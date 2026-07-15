@@ -6,13 +6,10 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from database.repositories.admin_repo import AdminRepository
-from filters.admin import IsAdminFilter
 from state.admin_states import AdminState
 from .common import render_shop_menu
 
 categories_router = Router()
-categories_router.message.filter(IsAdminFilter())
-categories_router.callback_query.filter(IsAdminFilter())
 
 
 @categories_router.callback_query(F.data == "admin_shop")

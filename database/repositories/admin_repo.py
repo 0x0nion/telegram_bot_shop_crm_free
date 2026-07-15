@@ -139,7 +139,8 @@ class AdminRepository(BaseRepository):
                                  admin_id: int = None) -> Category | TempCategory | None:
         model = TempCategory if use_temp else Category
         query = select(model).where(model.id == category_id)
-        if use_temp: query = query.where(model.admin_id == admin_id)
+        if use_temp:
+            query = query.where(model.admin_id == admin_id)
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
@@ -173,7 +174,8 @@ class AdminRepository(BaseRepository):
                               admin_id: int = None):
         model = TempCategory if use_temp else Category
         data = {"name": name, "parent_id": parent_id}
-        if use_temp: data["admin_id"] = admin_id
+        if use_temp:
+            data["admin_id"] = admin_id
 
         new_item = model(**data)
         self.session.add(new_item)
@@ -186,7 +188,8 @@ class AdminRepository(BaseRepository):
         model = TempProduct if use_temp else Product
         data = {"name": name, "description": description, "price": price, "category_id": category_id,
                 "image_id": image_id, "unit": unit}
-        if use_temp: data["admin_id"] = admin_id
+        if use_temp:
+            data["admin_id"] = admin_id
 
         new_item = model(**data)
         self.session.add(new_item)
