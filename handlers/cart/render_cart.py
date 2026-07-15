@@ -29,13 +29,18 @@ async def render_cart(
     cart_msg_id = state_data.get("cart_message_id")
 
     address = state_data.get("delivery_address")
-    comment = state_data.get("user_comment")
+    comment = state_data.get("user_comment", "")
 
     if not user or not user.cart:
         text = locale.get_text("cart_empty")
         try:
             if cart_msg_id:
-                await bot.edit_message_text(chat_id=chat_id, message_id=cart_msg_id, text=text, parse_mode="HTML")
+                await bot.edit_message_text(
+                    chat_id=chat_id,
+                    message_id=cart_msg_id,
+                    text=text,
+                    reply_markup=InlineKb(user.language).get_kb('user_main_menu')
+                )
                 return
         except TelegramBadRequest:
             pass

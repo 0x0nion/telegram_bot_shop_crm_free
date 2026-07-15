@@ -23,8 +23,8 @@
     "cart_summary_subtotal": "\n💰 <b>Товары:</b> {subtotal:.2f} $\n",
     "cart_summary_delivery": "🚚 <b>Доставка:</b> {delivery:.2f} $\n",
     "cart_summary_total": "💵 <b>Итого:</b> {total:.2f} $\n\n",
-    "cart_address_label": "📍 <b>Адрес:</b> {address}\n",
-    "cart_address_not_specified": "❌ Не указан",
+    "cart_address_label": "{address}\n",
+    "cart_address_not_specified": "\uD83D\uDCCDАдрес доставки: ❌ Не указан",
     "cart_comment_label": "📝 <b>Комментарий:</b> {comment}",
     "cart_comment_not_specified": "Отсутствует"
   },
@@ -52,8 +52,8 @@
     "cart_summary_subtotal": "\n💰 <b>Subtotal:</b> {subtotal:.2f} $\n",
     "cart_summary_delivery": "🚚 <b>Delivery:</b> {delivery:.2f} $\n",
     "cart_summary_total": "💵 <b>Total:</b> {total:.2f} $\n\n",
-    "cart_address_label": "📍 <b>Address:</b> {address}\n",
-    "cart_address_not_specified": "❌ Not specified",
+    "cart_address_label": "{address}\n",
+    "cart_address_not_specified": "\uD83D\uDCCDDelivery address: ❌ Not specified",
     "cart_comment_label": "📝 <b>Comment:</b> {comment}",
     "cart_comment_not_specified": "None"
   },
@@ -81,9 +81,9 @@
     "cart_summary_subtotal": "\n💰 <b>Productos:</b> {subtotal:.2f} $\n",
     "cart_summary_delivery": "🚚 <b>Envío:</b> {delivery:.2f} $\n",
     "cart_summary_total": "💵 <b>Total:</b> {total:.2f} $\n\n",
-    "cart_address_label": "📍 <b>Dirección:</b> {address}\n",
+    "cart_address_label": "{address}\n",
     "cart_comment_label": "📝 <b>Comentario:</b> {comment}",
-    "cart_address_not_specified": "❌ No especificada",
+    "cart_address_not_specified": "\uD83D\uDCCDDirección de envío: ❌ No especificada",
     "cart_comment_not_specified": "Ninguno"
   }
 }
