@@ -3,7 +3,7 @@ from aiogram.fsm.state import StatesGroup, State
 
 
 class AdminState(StatesGroup):
-    add_category = State()  # Это у тебя уже есть
+    add_category = State()
 
 
 class EditProduct(StatesGroup):

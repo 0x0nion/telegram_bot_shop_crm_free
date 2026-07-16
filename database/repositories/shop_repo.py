@@ -31,7 +31,6 @@ class ShopRepository(BaseRepository):
 
     async def get_next_product(self, category_id: int, current_product_id: int) -> Product | None:
         """Получить следующий товар (с закольцовыванием)"""
-        # 1. Ищем следующий по порядку
         query = select(Product).where(
             Product.category_id == category_id,
             Product.id > current_product_id
@@ -40,7 +39,6 @@ class ShopRepository(BaseRepository):
         result = await self.session.execute(query)
         next_prod = result.scalar_one_or_none()
 
-        # 2. Если достигли конца списка, берем самый первый товар
         if not next_prod:
             query_first = select(Product).where(
                 Product.category_id == category_id
@@ -52,7 +50,6 @@ class ShopRepository(BaseRepository):
 
     async def get_prev_product(self, category_id: int, current_product_id: int) -> Product | None:
         """Получить предыдущий товар (с закольцовыванием)"""
-        # 1. Ищем предыдущий по порядку
         query = select(Product).where(
             Product.category_id == category_id,
             Product.id < current_product_id
@@ -61,7 +58,6 @@ class ShopRepository(BaseRepository):
         result = await self.session.execute(query)
         prev_prod = result.scalar_one_or_none()
 
-        # 2. Если достигли начала списка, берем самый последний товар
         if not prev_prod:
             query_last = select(Product).where(
                 Product.category_id == category_id

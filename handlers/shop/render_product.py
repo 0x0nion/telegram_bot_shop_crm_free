@@ -13,22 +13,17 @@ editor_router = Router()
 
 
 def format_product_from_template(product, template: str) -> str:
-    # 1. Готовим данные для подстановки
     data = {
         "name": product.name,
         "description": product.description or "",
-        "price": float(product.price),  # Приводим к float для красивого вывода
+        "price": float(product.price),
         "unit": product.unit or ""
     }
 
-    # 2. Просто форматируем шаблон напрямую, без опасных декодеров!
     try:
         return template.format(**data)
     except Exception as e:
-        # Если вдруг в шаблоне опечатка в плейсхолдерах
         return f"{product.name} - {product.price} $"
-
-    return cleaned_template.format(**data)
 
 
 async def self_destruct(message: Message, seconds: int = 3):
@@ -54,7 +49,6 @@ async def show_product_card(
     if not product:
         return
 
-    # Безопасно получаем соседние товары (они могут вернуть None)
     next_product = await shop_repo.get_next_product(
         category_id=product.category_id,
         current_product_id=product.id
@@ -64,25 +58,22 @@ async def show_product_card(
         current_product_id=product.id
     )
 
-    # Инициализируем локали
     locale = Locale(lang)
     kb_manager = InlineKb(lang)
 
-    # Рендерим описание товара по шаблону
     template_product = locale.get_text('product_template')
     text = format_product_from_template(
         product=product,
         template=template_product
     )
 
-    # Собираем красивую динамическую клавиатуру
     reply_markup = kb_manager.get_product_card_kb(
         product_id=product.id,
         category_id=product.category_id,
         prev_id=prev_product.id if prev_product else None,
         next_id=next_product.id if next_product else None,
         cart_item=cart_item,
-        manager_url="https://t.me/el_mex"  # URL менеджера без символа @ во избежание ошибок Telegram API
+        manager_url="https://t.me/username"
     )
 
     try:

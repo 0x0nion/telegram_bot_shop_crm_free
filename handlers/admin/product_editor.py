@@ -96,8 +96,6 @@ async def start_edit_product(callback: CallbackQuery, state: FSMContext):
     await state.set_state(target_state)
     prompt_text = prompts.get(action, "Введите данные:")
 
-    # ИСПРАВЛЕНО: Карточка с фото не может быть отредактирована через edit_message_text.
-    # Если у сообщения есть фото, удаляем его и отправляем чистый текст, обновляя message_id в FSM.
     if callback.message.photo:
         try:
             await callback.message.delete()
@@ -123,7 +121,6 @@ async def process_edit_input(message: Message, state: FSMContext, admin_repo: Ad
     old_msg_id = data.get('message_id')
     curr_state = await state.get_state()
 
-    # Защита от удаления сообщения пользователя (например, в группах или при сбоях)
     try:
         await message.delete()
     except TelegramBadRequest:
@@ -147,8 +144,6 @@ async def process_edit_input(message: Message, state: FSMContext, admin_repo: Ad
         await admin_repo.update_product_field(pid, "image_id", message.photo[-1].file_id, use_temp=True,
                                               admin_id=message.from_user.id)
     else:
-        # ИСПРАВЛЕНО: Строка состояния содержит "description", а не "desc".
-        # Проверка "desc" in curr_state всегда была False, из-за чего описание записывалось в поле "unit".
         field = "name" if "name" in curr_state else "description" if "description" in curr_state else "unit"
         await admin_repo.update_product_field(pid, field, message.text.strip(), use_temp=True,
                                               admin_id=message.from_user.id)

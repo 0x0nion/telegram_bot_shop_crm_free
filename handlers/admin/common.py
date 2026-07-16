@@ -38,7 +38,6 @@ async def render_shop_menu(
 
     builder = InlineKeyboardBuilder()
 
-    # ОПТИМИЗИРОВАНО: Убран повторный запрос к БД, используем уже полученный объект current_cat
     if current_cat_id and current_cat:
         parent_to_go = current_cat.parent_id if current_cat.parent_id else "root"
         builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data=f"admin_shop_{parent_to_go}"))
@@ -65,7 +64,6 @@ async def render_shop_menu(
     chat_id = event.message.chat.id if isinstance(event, CallbackQuery) else event.chat.id
     msg_id = message_id_to_edit or (event.message.message_id if isinstance(event, CallbackQuery) else None)
 
-    # ИСПРАВЛЕНО: Обработка исключений теперь защищает от мерцания экрана при "message is not modified"
     try:
         if msg_id:
             await event.bot.edit_message_text(chat_id=chat_id, message_id=msg_id, text=text, reply_markup=builder.as_markup())
@@ -73,7 +71,7 @@ async def render_shop_menu(
             await event.bot.send_message(chat_id=chat_id, text=text, reply_markup=builder.as_markup())
     except TelegramBadRequest as e:
         if "message is not modified" in str(e):
-            pass  # Игнорируем, если меню не изменилось, чтобы не перезаписывать и не удалять сообщение
+            pass
         elif msg_id:
             try:
                 await event.bot.delete_message(chat_id=chat_id, message_id=msg_id)

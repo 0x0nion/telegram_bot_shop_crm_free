@@ -12,14 +12,12 @@ def get_catalog_keyboard(
     """Универсальный строитель клавиатуры для навигации по магазину"""
     builder = InlineKeyboardBuilder()
 
-    # 1. Выводим категории (если есть подкатегории)
     for category in categories:
         builder.row(InlineKeyboardButton(
             text=f"📁 {category.name}",
             callback_data=f"user_cat_{category.id}"
         ))
 
-    # 2. Выводим товары в этой категории (если переданы)
     if products:
         for product in products:
             builder.row(InlineKeyboardButton(
@@ -30,7 +28,6 @@ def get_catalog_keyboard(
     # 3. Управляющие кнопки (Назад / В главное меню)
     navigation_buttons = []
     if parent_id is not None:
-        # Если мы внутри подкатегории, кнопка "Назад" ведет к родителю
         navigation_buttons.append(InlineKeyboardButton(
             text="⬅️ Назад",
             callback_data="user_catalog_root" if parent_id == 0 else f"user_cat_{parent_id}"

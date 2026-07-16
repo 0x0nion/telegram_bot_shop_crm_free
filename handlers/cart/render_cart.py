@@ -97,7 +97,6 @@ async def render_cart(
             await state.update_data(cart_message_id=new_msg.message_id)
     except TelegramBadRequest as e:
         if "message is not modified" not in str(e).lower():
-            # Если сообщение было удалено или возникла иная ошибка — отправляем новое
             new_msg = await bot.send_message(
                 chat_id=chat_id,
                 text=text,

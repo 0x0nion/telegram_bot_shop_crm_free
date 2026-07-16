@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 @products_router.callback_query(F.data.startswith("admin_add_item_"))
 async def create_default_product(callback: CallbackQuery, admin_repo: AdminRepository, state: FSMContext):
-    # Сбрасываем FSM-состояния на случай, если админ параллельно что-то вводил
     await state.clear()
 
     data_parts = callback.data.split("_")
@@ -38,8 +37,6 @@ async def route_delete_product(callback: CallbackQuery, admin_repo: AdminReposit
 
     product_id_to_del = int(callback.data.split("_")[3])
 
-    # ИСПРАВЛЕНО: Запрос товара теперь идет из temp-таблицы с указанием admin_id.
-    # Если удалить только что созданный в черновике товар, бот найдет его и не выкинет в корень меню.
     product = await admin_repo.get_product_by_id(
         product_id=product_id_to_del,
         use_temp=True,

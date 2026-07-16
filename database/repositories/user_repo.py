@@ -18,7 +18,7 @@ class UserRepository(BaseRepository):
     async def get_user_with_cart(self, user_id: int) -> User | None:
         stmt = (
             select(User)
-            .options(selectinload(User.cart))  # ЭТО КЛЮЧЕВОЙ МОМЕНТ
+            .options(selectinload(User.cart))
             .where(User.id == user_id)
         )
         result = await self.session.execute(stmt)

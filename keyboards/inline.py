@@ -135,7 +135,6 @@ class InlineKb:
             logger.critical("[INLINE KB] Keyboards template is missing!")
             return None
 
-        # Подгружаем языковые настройки для кнопок навигации
         nav_data = self.template.get("shop_navigation")
         if not nav_data:
             logger.critical("[INLINE KB] 'shop_navigation' not found in kb.json!")
@@ -143,7 +142,6 @@ class InlineKb:
 
         nav_buttons = nav_data.get("buttons", {})
 
-        # Получаем тексты кнопок назад
         back_data = nav_buttons.get("back", {})
         to_main_data = nav_buttons.get("to_main_menu", {})
 
@@ -182,7 +180,6 @@ class InlineKb:
         if self.template is None:
             return None
 
-        # Получаем конфигурацию карточки товара
         data = self.template.get("product_card")
         if not data:
             logger.critical("[INLINE KB] 'product_card' configuration not found in kb.json!")
@@ -190,19 +187,16 @@ class InlineKb:
 
         buttons_cfg = data.get("buttons", {})
 
-        # Забираем переводы с фолбеком на английский
         add_to_cart_text = buttons_cfg.get("add_to_cart", {}).get(self.lang) or "🛒 Add to Cart"
         cart_template = buttons_cfg.get("cart_label", {}).get(self.lang) or "🧺 Cart{count}"
         manager_text = buttons_cfg.get("manager", {}).get(self.lang) or "💬 Manager"
         back_text = buttons_cfg.get("back", {}).get(self.lang) or "⬅️ Back"
 
-        # Форматируем счетчик корзины (если товаров 0 — скобки не показываем)
         count_str = f" ({cart_item})" if cart_item > 0 else ""
         cart_text = cart_template.format(count=count_str)
 
         builder = InlineKeyboardBuilder()
 
-        # 1. Ряд навигации и покупки
         nav_row = []
         if prev_id:
             nav_row.append(InlineKeyboardButton(text="⬅️", callback_data=f"prev_{prev_id}"))
@@ -214,13 +208,10 @@ class InlineKb:
 
         builder.row(*nav_row)
 
-        # 2. Ряд корзины
         builder.row(InlineKeyboardButton(text=cart_text, callback_data="client_cart", style="primary"))
 
-        # 3. Ряд менеджера
         builder.row(InlineKeyboardButton(text=manager_text, url=manager_url))
 
-        # 4. Ряд возврата назад
         back_cat = category_id if category_id else "root"
         builder.row(InlineKeyboardButton(text=back_text, callback_data=f"client_shop_{back_cat}"))
 
@@ -244,7 +235,6 @@ class InlineKb:
 
         builder = InlineKeyboardBuilder()
 
-        # 1. Генерируем управление товарами (товар, минус, плюс)
         for item in cart_items:
             product_name = item.product.name if item.product else "Deleted Product"
             builder.row(
@@ -253,17 +243,14 @@ class InlineKb:
                 InlineKeyboardButton(text="➕", callback_data=f"inc_{item.product_id}", style='success')
             )
 
-        # 2. Кнопки изменения параметров доставки
         builder.row(
             InlineKeyboardButton(text=set_address_text, callback_data="set_address"),
             InlineKeyboardButton(text=set_comment_text, callback_data="set_comment")
         )
 
-        # 3. Кнопка оформления (если есть адрес)
         if has_address:
             builder.row(InlineKeyboardButton(text=checkout_text, callback_data="checkout_confirm"))
 
-        # 4. Назад
         builder.row(InlineKeyboardButton(text=back_text, callback_data="client_main"))
 
         return builder.as_markup()

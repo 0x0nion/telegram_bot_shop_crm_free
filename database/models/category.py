@@ -11,12 +11,9 @@ class Category(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100))
-    # Ссылка на id родительской категории
-    parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("categories.id", ondelete="CASCADE"))
+    parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey(column= "categories.id", ondelete="CASCADE"))
+    subcategories: Mapped[List["Category"]] = relationship(argument="Category", back_populates="parent")
+    parent: Mapped[Optional["Category"]] = relationship(argument="Category", remote_side=[id], back_populates="subcategories")
 
-    # Связи (Relationships) для удобной работы в коде
-    subcategories: Mapped[List["Category"]] = relationship("Category", back_populates="parent")
-    parent: Mapped[Optional["Category"]] = relationship("Category", remote_side=[id], back_populates="subcategories")
-
-    products: Mapped[List["Product"]] = relationship("Product", back_populates="category")
+    products: Mapped[List["Product"]] = relationship(argument="Product", back_populates="category")
 

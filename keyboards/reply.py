@@ -1,6 +1,5 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 
-# Клавиатура с кнопкой отправки гео
 def get_address_kb():
     return ReplyKeyboardMarkup(
         keyboard=[

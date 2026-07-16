@@ -27,7 +27,6 @@ if __name__ == "__main__":
 
     user_input = "Привет, как твои дела? Что делаешь сегодня вечером?"
 
-    # Переводим на лету
     translations = translator.translate_all(user_input)
 
     print("Оригинал:", user_input)

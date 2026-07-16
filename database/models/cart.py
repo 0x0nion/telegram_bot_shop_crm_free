@@ -10,9 +10,7 @@ class CartItem(Base):
     __tablename__ = "cart_items"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"))
+    user_id: Mapped[int] = mapped_column(ForeignKey(column="users.id", ondelete="CASCADE"))
+    product_id: Mapped[int] = mapped_column(ForeignKey(column="products.id", ondelete="CASCADE"))
     quantity: Mapped[int] = mapped_column(default=1)
-
-    # Связи: так мы сможем легко делать user.cart или item.product
     product: Mapped["Product"] = relationship("Product")

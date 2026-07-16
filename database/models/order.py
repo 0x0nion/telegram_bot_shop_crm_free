@@ -10,7 +10,7 @@ class Order(Base):
     __tablename__ = "orders"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    user_id: Mapped[int] = mapped_column(ForeignKey(column="users.id", ondelete="CASCADE"))
     status: Mapped[str] = mapped_column(String(50), default="pending")
 
     delivery_address: Mapped[str | None] = mapped_column(String(255), nullable=True)

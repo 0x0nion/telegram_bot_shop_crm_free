@@ -14,10 +14,7 @@ class Product(Base):
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[Optional[str]] = mapped_column(Text)
     price: Mapped[float] = mapped_column(Numeric(10, 2))
-
-    # Новое поле для единиц измерения
     unit: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
-
     image_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     category_id: Mapped[Optional[int]] = mapped_column(ForeignKey("categories.id", ondelete="SET NULL"))
     category: Mapped[Optional["Category"]] = relationship("Category", back_populates="products")

@@ -11,18 +11,15 @@ class AdminRepository(BaseRepository):
     # --- Методы синхронизации ---
 
     async def sync_to_temp(self, admin_id: int):
-        # Очищаем временные данные текущего админа
         await self.session.execute(delete(TempCategory).where(TempCategory.admin_id == admin_id))
         await self.session.execute(delete(TempProduct).where(TempProduct.admin_id == admin_id))
 
-        # Получаем свежие данные из основы
         cats_res = await self.session.execute(select(Category))
         cats = cats_res.scalars().all()
 
         real_to_temp_cat_id = {}
         temp_cats_pairs = []
 
-        # Шаг 1: Создаем временные категории без parent_id, чтобы сгенерировать их ID
         for cat in cats:
             tc = TempCategory(
                 original_id=cat.id, name=cat.name, parent_id=None, admin_id=admin_id
@@ -32,16 +29,13 @@ class AdminRepository(BaseRepository):
 
         await self.session.flush()
 
-        # Шаг 2: Строим маппинг real_id -> temp_id
         for cat, tc in temp_cats_pairs:
             real_to_temp_cat_id[cat.id] = tc.id
 
-        # Шаг 3: Проставляем правильные parent_id, указывающие на temp-записи
         for cat, tc in temp_cats_pairs:
             if cat.parent_id is not None:
                 tc.parent_id = real_to_temp_cat_id.get(cat.parent_id)
 
-        # Шаг 4: Копируем продукты с привязкой к temp_category_id
         prods_res = await self.session.execute(select(Product))
         for p in prods_res.scalars().all():
             self.session.add(TempProduct(
@@ -52,7 +46,6 @@ class AdminRepository(BaseRepository):
         await self.session.commit()
 
     async def commit_changes(self, admin_id: int):
-        # 1. Получаем все временные данные админа
         temp_cats = (
             await self.session.execute(select(TempCategory).where(TempCategory.admin_id == admin_id))).scalars().all()
         temp_prods = (
@@ -61,7 +54,6 @@ class AdminRepository(BaseRepository):
         alive_cat_ids = [tc.original_id for tc in temp_cats if tc.original_id is not None]
         alive_prod_ids = [tp.original_id for tp in temp_prods if tp.original_id is not None]
 
-        # 2. УДАЛЕНИЕ: Сначала продукты, затем категории (избегаем конфликтов Foreign Key)
         if alive_prod_ids:
             await self.session.execute(delete(Product).where(~Product.id.in_(alive_prod_ids)))
         else:
@@ -72,15 +64,12 @@ class AdminRepository(BaseRepository):
         else:
             await self.session.execute(delete(Category))
 
-        # 3. ПЕРЕНОС И ОБНОВЛЕНИЕ (Оптимизировано: без UPDATE в цикле)
-        # Подгружаем выжившие боевые категории для прямого обновления объектов
         real_cats_res = await self.session.execute(select(Category).where(Category.id.in_(alive_cat_ids)))
         real_cats_dict = {c.id: c for c in real_cats_res.scalars().all()}
 
         temp_to_real_cat_id = {}
         new_cats_pairs = []
 
-        # Обновляем существующие и готовим новые категории
         for tc in temp_cats:
             if tc.original_id is not None:
                 temp_to_real_cat_id[tc.id] = tc.original_id
@@ -97,7 +86,6 @@ class AdminRepository(BaseRepository):
             for tc, new_cat in new_cats_pairs:
                 temp_to_real_cat_id[tc.id] = new_cat.id
 
-        # Выставляем корректные parent_id для всех боевых категорий
         for tc in temp_cats:
             real_cat_id = temp_to_real_cat_id[tc.id]
             real_cat = real_cats_dict.get(real_cat_id) or next(
@@ -105,11 +93,9 @@ class AdminRepository(BaseRepository):
             if real_cat:
                 real_cat.parent_id = temp_to_real_cat_id.get(tc.parent_id) if tc.parent_id is not None else None
 
-        # Подгружаем выжившие боевые продукты для прямого обновления
         real_prods_res = await self.session.execute(select(Product).where(Product.id.in_(alive_prod_ids)))
         real_prods_dict = {p.id: p for p in real_prods_res.scalars().all()}
 
-        # Синхронизируем продукты
         for tp in temp_prods:
             real_category_id = temp_to_real_cat_id.get(tp.category_id) if tp.category_id is not None else None
             if tp.original_id is not None:
@@ -127,7 +113,6 @@ class AdminRepository(BaseRepository):
                     unit=tp.unit, image_id=tp.image_id, category_id=real_category_id
                 ))
 
-        # 4. Очищаем временные таблицы админа
         await self.session.execute(delete(TempCategory).where(TempCategory.admin_id == admin_id))
         await self.session.execute(delete(TempProduct).where(TempProduct.admin_id == admin_id))
 

@@ -15,7 +15,6 @@ categories_router = Router()
 @categories_router.callback_query(F.data == "admin_shop")
 @categories_router.callback_query(F.data.startswith("admin_shop_"))
 async def route_shop_level(callback: CallbackQuery, admin_repo: AdminRepository, state: FSMContext):
-    # Сбрасываем состояние при перемещении по меню, чтобы не было утечек FSM
     await state.clear()
 
     data_parts = callback.data.split("_")
@@ -79,8 +78,6 @@ async def process_add_category(message: Message, state: FSMContext, admin_repo: 
 async def route_delete_category(callback: CallbackQuery, admin_repo: AdminRepository):
     category_id_to_del = int(callback.data.split("_")[3])
 
-    # Запрос категории идет из temp-таблицы с указанием admin_id,
-    # чтобы не падало, если категория создана в этой сессии и еще не в основной БД
     target_category = await admin_repo.get_category_by_id(
         category_id=category_id_to_del,
         use_temp=True,

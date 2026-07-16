@@ -47,21 +47,17 @@ async def show_admin_panel(
 
 @admin_base_router.message(Command("admin"))
 async def cmd_admin(message: Message, admin_repo: AdminRepository):
-    # Вход по команде создаёт новую сессию редактирования (синхронизируем данные)
     await show_admin_panel(message, admin_repo, sync=True)
 
 
 @admin_base_router.callback_query(F.data == 'admin')
 async def cb_admin(callback: CallbackQuery, admin_repo: AdminRepository):
-    # Прямой вход в админку инициализирует свежую копию данных
     await show_admin_panel(callback, admin_repo, sync=True)
 
 
 @admin_base_router.callback_query(F.data == 'admin_save_shop')
 async def cb_admin_save(callback: CallbackQuery, admin_repo: AdminRepository):
-    # Применяем изменения в основную БД
     await admin_repo.commit_changes(admin_id=callback.from_user.id)
-    # Перезапускаем temp-таблицы уже с новыми боевыми данными
     await show_admin_panel(callback, admin_repo, is_saved=True, sync=True)
 
 
