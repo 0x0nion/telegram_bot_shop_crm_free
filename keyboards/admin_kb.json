@@ -70,6 +70,11 @@
         "es": "🔴 Añadir Producto Aquí",
         "ru": "🔴 Добавить товар сюда"
       },
+      "add_tittle": {
+        "en": "📝 Category details",
+        "es": "📝 Detalles de la categoría",
+        "ru": "📝 Описание категории"
+      },
       "save_changes": {
         "en": "💾 Save Changes",
         "es": "💾 Guardar Cambios",

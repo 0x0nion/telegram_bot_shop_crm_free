@@ -5,9 +5,10 @@ from aiogram.fsm.context import FSMContext
 
 from database.repositories.admin_repo import AdminRepository
 from filters.admin import IsAdminFilter
+from handlers.admin.shop.render_shop_menu import render_shop_menu
 from keyboards.admin_inline import AdminInlineKb
 from database.models.user import User
-from .common import render_shop_menu
+
 
 products_router = Router()
 products_router.message.filter(IsAdminFilter())

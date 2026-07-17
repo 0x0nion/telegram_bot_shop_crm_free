@@ -4,10 +4,11 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.exceptions import TelegramBadRequest
 
 from database.repositories.admin_repo import AdminRepository
+from handlers.admin.shop.render_shop_menu import render_shop_menu
 from keyboards.admin_inline import AdminInlineKb
 from state.admin_states import AdminState
 from database.models.user import User
-from .common import render_shop_menu
+
 
 categories_router = Router()
 
