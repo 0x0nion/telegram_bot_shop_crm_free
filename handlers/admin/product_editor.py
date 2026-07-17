@@ -1,25 +1,20 @@
-# handlers/admin/product_editor.py
 import asyncio
+import logging
 from aiogram import F, Router, Bot
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, InlineKeyboardButton, Message
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import CallbackQuery, Message
 from aiogram.exceptions import TelegramBadRequest
 
 from database.repositories.admin_repo import AdminRepository
+from keyboards.admin_inline import AdminInlineKb
 from state.admin_states import EditProduct
+from database.models.user import User
 
 editor_router = Router()
-
-
-def format_product_text(product) -> str:
-    return (f"📦 <b>{product.name}</b>\n\n"
-            f"📝 <i>{product.description or 'Описание отсутствует'}</i>\n\n"
-            f"💰 <b>Цена:</b> {product.price} руб. / {product.unit or 'шт.'}")
+logger = logging.getLogger(__name__)
 
 
 async def self_destruct(message: Message, seconds: int = 3):
-    """Безопасно удаляет сообщение с ошибкой через заданное время."""
     await asyncio.sleep(seconds)
     try:
         await message.delete()
@@ -28,24 +23,22 @@ async def self_destruct(message: Message, seconds: int = 3):
 
 
 async def show_product_card(chat_id: int, product_id: int, admin_repo: AdminRepository, bot: Bot,
-                            old_message_id: int = None):
-    """Универсальная функция для отрисовки карточки (из черновика)."""
+                            old_message_id: int = None, lang: str = "en"):
     product = await admin_repo.get_product_by_id(product_id, use_temp=True, admin_id=chat_id)
     if not product:
         return
 
-    text = format_product_text(product)
-    builder = InlineKeyboardBuilder()
-    builder.row(
-        InlineKeyboardButton(text="✏️ Название", callback_data=f"admin_edit_p_name_{product_id}"),
-        InlineKeyboardButton(text="⚖️ Ед. изм.", callback_data=f"admin_edit_p_unit_{product_id}")
-    )
-    builder.row(
-        InlineKeyboardButton(text="✏️ Описание", callback_data=f"admin_edit_p_desc_{product_id}"),
-        InlineKeyboardButton(text="💰 Цена", callback_data=f"admin_edit_p_price_{product_id}")
-    )
-    builder.row(InlineKeyboardButton(text="📸 Фото", callback_data=f"admin_edit_p_photo_{product_id}"))
-    builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data=f"admin_shop_{product.category_id or 'root'}"))
+    kb = AdminInlineKb(lang=lang)
+
+    desc_val = product.description or kb.get_text("no_description", "Описание отсутствует")
+    unit_val = product.unit or kb.get_text("default_unit", "шт.")
+
+    text = kb.get_text("product_card_template",
+                       "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Цена:</b> {price} {unit}")
+    formatted_text = text.format(name=product.name, description=desc_val, price=product.price, unit=unit_val)
+
+    category_id = product.category_id if product.category_id else "root"
+    reply_markup = kb.get_product_editor_kb(product_id=product_id, category_id=category_id)
 
     if old_message_id:
         try:
@@ -54,31 +47,28 @@ async def show_product_card(chat_id: int, product_id: int, admin_repo: AdminRepo
             pass
 
     if product.image_id:
-        await bot.send_photo(chat_id, photo=product.image_id, caption=text, reply_markup=builder.as_markup(),
+        await bot.send_photo(chat_id, photo=product.image_id, caption=formatted_text, reply_markup=reply_markup,
                              parse_mode="HTML")
     else:
-        await bot.send_message(chat_id, text=text, reply_markup=builder.as_markup(), parse_mode="HTML")
+        await bot.send_message(chat_id, text=formatted_text, reply_markup=reply_markup, parse_mode="HTML")
 
 
 @editor_router.callback_query(F.data.startswith("admin_item_"))
-async def route_product_card(callback: CallbackQuery, admin_repo: AdminRepository):
+async def route_product_card(callback: CallbackQuery, admin_repo: AdminRepository, user: User):
     product_id = int(callback.data.split("_")[2])
-    await show_product_card(callback.message.chat.id, product_id, admin_repo, callback.bot, callback.message.message_id)
+    lang = user.language if user.language in ["ru", "en", "es"] else "en"
+
+    await show_product_card(callback.message.chat.id, product_id, admin_repo, callback.bot, callback.message.message_id,
+                            lang=lang)
     await callback.answer()
 
 
 @editor_router.callback_query(F.data.startswith("admin_edit_p_"))
-async def start_edit_product(callback: CallbackQuery, state: FSMContext):
+async def start_edit_product(callback: CallbackQuery, state: FSMContext, user: User):
     action = callback.data.split("_")[3]
     product_id = int(callback.data.split("_")[4])
-
-    prompts = {
-        "name": "✍️ Введите новое название:",
-        "desc": "✍️ Введите новое описание:",
-        "price": "💰 Введите новую цену (число):",
-        "unit": "⚖️ Введите ед. измерения (например: шт, кг):",
-        "photo": "📸 Пришлите новую фотографию товара:"
-    }
+    lang = user.language if user.language in ["ru", "en", "es"] else "en"
+    kb = AdminInlineKb(lang=lang)
 
     state_mapping = {
         "name": EditProduct.name,
@@ -90,11 +80,13 @@ async def start_edit_product(callback: CallbackQuery, state: FSMContext):
 
     target_state = state_mapping.get(action)
     if not target_state:
-        await callback.answer("Ошибка выбора поля", show_alert=True)
+        err_field_text = kb.get_text("errors.selection_field", "Ошибка выбора поля")
+        await callback.answer(err_field_text, show_alert=True)
         return
 
     await state.set_state(target_state)
-    prompt_text = prompts.get(action, "Введите данные:")
+
+    prompt_text = kb.get_text(f"prompts.{action}") or kb.get_text("prompts.default", "Введите данные:")
 
     if callback.message.photo:
         try:
@@ -115,11 +107,14 @@ async def start_edit_product(callback: CallbackQuery, state: FSMContext):
 @editor_router.message(EditProduct.unit, F.text)
 @editor_router.message(EditProduct.price, F.text)
 @editor_router.message(EditProduct.photo)
-async def process_edit_input(message: Message, state: FSMContext, admin_repo: AdminRepository):
+async def process_edit_input(message: Message, state: FSMContext, admin_repo: AdminRepository, user: User):
     data = await state.get_data()
     pid = data['product_id']
     old_msg_id = data.get('message_id')
     curr_state = await state.get_state()
+
+    lang = user.language if user.language in ["ru", "en", "es"] else "en"
+    kb = AdminInlineKb(lang=lang)
 
     try:
         await message.delete()
@@ -127,14 +122,16 @@ async def process_edit_input(message: Message, state: FSMContext, admin_repo: Ad
         pass
 
     if "photo" in curr_state and not message.photo:
-        err = await message.answer("❌ Пожалуйста, пришлите изображение.")
+        err_msg = kb.get_text("errors.not_photo", "❌ Пожалуйста, пришлите изображение.")
+        err = await message.answer(err_msg)
         asyncio.create_task(self_destruct(err))
         return
 
     if "price" in curr_state:
         clean_text = message.text.strip().replace(',', '.', 1)
         if not clean_text.replace('.', '', 1).isdigit():
-            err = await message.answer("❌ Ошибка! Введите корректное число.")
+            err_msg = kb.get_text("errors.invalid_price", "❌ Ошибка! Введите корректное число.")
+            err = await message.answer(err_msg)
             asyncio.create_task(self_destruct(err))
             return
         await admin_repo.update_product_field(pid, "price", float(clean_text), use_temp=True,
@@ -149,4 +146,4 @@ async def process_edit_input(message: Message, state: FSMContext, admin_repo: Ad
                                               admin_id=message.from_user.id)
 
     await state.clear()
-    await show_product_card(message.chat.id, pid, admin_repo, message.bot, old_msg_id)
+    await show_product_card(message.chat.id, pid, admin_repo, message.bot, old_msg_id, lang=lang)

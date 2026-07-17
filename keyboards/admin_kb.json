@@ -1,0 +1,267 @@
+{
+  "admin_main_menu": {
+    "buttons": {
+      "admin_shop": {
+        "en": "⚙️ Edit Shop",
+        "es": "⚙️ Editar Tienda",
+        "ru": "⚙️ Редактировать Магазин"
+      },
+      "admin_warehouse": {
+        "en": "📦 Warehouse",
+        "es": "📦 Almacén",
+        "ru": "📦 Склад"
+      },
+      "admin_users": {
+        "en": "👥 Users",
+        "es": "👥 Usuarios",
+        "ru": "👥 Юзеры"
+      },
+      "admin_workers": {
+        "en": "⚒ Workers",
+        "es": "⚒ Trabajadores",
+        "ru": "Работники"
+      },
+      "admin_alert": {
+        "en": "📢 Broadcast",
+        "es": "📢 Difusión",
+        "ru": "Рассылка"
+      },
+      "admin_stat": {
+        "en": "📈 Statistics",
+        "es": "📈 Estadísticas",
+        "ru": "Статистика"
+      }
+    },
+    "sizes": [1, 1, 1, 1, 1, 1]
+  },
+  "admin_category_actions": {
+    "buttons": {
+      "cancel": {
+        "en": "📥 Cancel",
+        "es": "📥 Cancelar",
+        "ru": "📥 Отмена"
+      }
+    }
+  },
+  "admin_shop_navigation": {
+    "buttons": {
+      "back": {
+        "en": "⬅️ Back",
+        "es": "⬅️ Volver",
+        "ru": "⬅️ Назад"
+      },
+      "to_main_menu": {
+        "en": "⬅️ To Main Menu",
+        "es": "⬅️ Al Menú Principal",
+        "ru": "⬅️ В главное меню"
+      },
+      "delete": {
+        "en": "❌ Delete",
+        "es": "❌ Eliminar",
+        "ru": "❌ Удалить"
+      },
+      "add_subcategory": {
+        "en": "🟢 Add Subcategory",
+        "es": "🟢 Añadir Subcategoría",
+        "ru": "🟢 Добавить подкатегорию"
+      },
+      "add_product": {
+        "en": "🔴 Add Product Here",
+        "es": "🔴 Añadir Producto Aquí",
+        "ru": "🔴 Добавить товар сюда"
+      },
+      "save_changes": {
+        "en": "💾 Save Changes",
+        "es": "💾 Guardar Cambios",
+        "ru": "💾 Сохранить изменения"
+      }
+    }
+  },
+  "admin_product_editor": {
+    "buttons": {
+      "edit_name": {
+        "en": "✏️ Name",
+        "es": "✏️ Nombre",
+        "ru": "✏️ Название"
+      },
+      "edit_unit": {
+        "en": "⚖️ Unit",
+        "es": "⚖️ Unidad",
+        "ru": "⚖️ Ед. изм."
+      },
+      "edit_desc": {
+        "en": "✏️ Description",
+        "es": "✏️ Descripción",
+        "ru": "✏️ Описание"
+      },
+      "edit_price": {
+        "en": "💰 Price",
+        "es": "💰 Precio",
+        "ru": "💰 Цена"
+      },
+      "edit_photo": {
+        "en": "📸 Photo",
+        "es": "📸 Foto",
+        "ru": "📸 Фото"
+      },
+      "back": {
+        "en": "⬅️ Back",
+        "es": "⬅️ Volver",
+        "ru": "⬅️ Назад"
+      }
+    }
+  },
+  "admin_messages": {
+    "welcome_title": {
+      "en": "🔑 Admin panel is open:",
+      "es": "🔑 Panel de administración abierto:",
+      "ru": "🔑 Панель администратора открыта:"
+    },
+    "shop_updated": {
+      "en": "\n\n✅ Shop updated!",
+      "es": "\n\n✅ ¡Tienda actualizada!",
+      "ru": "\n\n✅ Магазин обновлен!"
+    },
+    "enter_category_name": {
+      "en": "✍️ Enter **name** for the new category:",
+      "es": "✍️ Introduce el **nombre** de la nueva categoría:",
+      "ru": "✍️ Введите **название** для новой категории:"
+    },
+    "root_menu_title": {
+      "en": "🏪 (Main Menu)\n",
+      "es": "🏪 (Menú Principal)\n",
+      "ru": "🏪 (Главное меню)\n"
+    },
+    "category_title_template": {
+      "en": "📁 Category: {name}\n",
+      "es": "📁 Categoría: {name}\n",
+      "ru": "📁 Категория: {name}\n"
+    },
+    "category_not_found": {
+      "en": "📁 Category: Not found\n",
+      "es": "📁 Categoría: No encontrada\n",
+      "ru": "📁 Категория: Не найдена\n"
+    },
+    "no_products": {
+      "en": "\nThere are no products here yet.",
+      "es": "\nNo hay productos aquí todavía.",
+      "ru": "\nЗдесь пока нет товаров."
+    },
+    "product_card_template": {
+      "en": "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Price:</b> {price} {unit}",
+      "es": "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Precio:</b> {price} {unit}",
+      "ru": "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Цена:</b> {price} {unit}"
+    },
+    "no_description": {
+      "en": "Description missing",
+      "es": "Sin descripción",
+      "ru": "Описание отсутствует"
+    },
+    "default_product_name": {
+      "en": "New Product",
+      "es": "Nuevo Producto",
+      "ru": "Новый товар"
+    },
+    "default_product_desc": {
+      "en": "No description",
+      "es": "Sin descripción",
+      "ru": "Описание отсутствует"
+    },
+    "default_unit": {
+      "en": "pcs.",
+      "es": "unid.",
+      "ru": "шт."
+    },
+    "prompts": {
+      "name": {
+        "en": "✍️ Enter new name:",
+        "es": "✍️ Introduce el nuevo nombre:",
+        "ru": "✍️ Введите новое название:"
+      },
+      "desc": {
+        "en": "✍️ Enter new description:",
+        "es": "✍️ Introduce la nueva descripción:",
+        "ru": "✍️ Введите новое описание:"
+      },
+      "price": {
+        "en": "💰 Enter new price (number):",
+        "es": "💰 Introduce el nuevo precio (número):",
+        "ru": "💰 Введите новую цену (число):"
+      },
+      "unit": {
+        "en": "⚖️ Enter measuring unit (e.g., pcs, kg):",
+        "es": "⚖️ Introduce la unidad de medida (ej. unid, kg):",
+        "ru": "⚖️ Введите ед. измерения (например: шт, кг):"
+      },
+      "photo": {
+        "en": "📸 Send a new photo of the product:",
+        "es": "📸 Envía una nueva foto del producto:",
+        "ru": "📸 Пришлите новую фотографию товара:"
+      },
+      "default": {
+        "en": "Enter data:",
+        "es": "Introduce los datos:",
+        "ru": "Введите данные:"
+      }
+    },
+    "errors": {
+      "not_photo": {
+        "en": "❌ Please send an image.",
+        "es": "❌ Por favor, envía una imagen.",
+        "ru": "❌ Пожалуйста, пришлите изображение."
+      },
+      "invalid_price": {
+        "en": "❌ Error! Enter a valid number.",
+        "es": "❌ ¡Error! Introduce un número válido.",
+        "ru": "❌ Ошибка! Введите корректное число."
+      },
+      "selection_field": {
+        "en": "Field selection error",
+        "es": "Error al seleccionar el campo",
+        "ru": "Ошибка выбора поля"
+      }
+    },
+    "alerts": {
+      "product_created": {
+        "en": "✨ Product draft created!",
+        "es": "✨ ¡Borrador de producto creado!",
+        "ru": "✨ Заготовка товара создана!"
+      },
+      "product_deleted": {
+        "en": "🗑 Product deleted",
+        "es": "🗑 Producto eliminado",
+        "ru": "🗑 Товар удален"
+      },
+      "warehouse": {
+        "en": "📦 'Warehouse' section is under development...",
+        "es": "📦 La sección 'Almacén' está en desarrollo...",
+        "ru": "📦 Раздел 'Склад' в разработке..."
+      },
+      "users": {
+        "en": "👥 'Users' section is under development...",
+        "es": "👥 La sección 'Usuarios' está en desarrollo...",
+        "ru": "👥 Раздел 'Юзеры' в разработке..."
+      },
+      "workers": {
+        "en": "⚒ 'Workers' section is under development...",
+        "es": "⚒ La sección 'Trabajadores' está en desarrollo...",
+        "ru": "⚒ Раздел 'Работники' в разработке..."
+      },
+      "alert": {
+        "en": "📢 'Broadcast' section is under development...",
+        "es": "📢 La sección 'Difusión' está en desarrollo...",
+        "ru": "📢 Раздел 'Рассылка' в разработке..."
+      },
+      "stat": {
+        "en": "📈 'Statistics' section is under development...",
+        "es": "📈 La sección 'Estadísticas' está en desarrollo...",
+        "ru": "📈 Раздел 'Статистика' в разработке..."
+      },
+      "default": {
+        "en": "Section under development...",
+        "es": "Sección en desarrollo...",
+        "ru": "Раздел в разработке..."
+      }
+    }
+  }
+}
