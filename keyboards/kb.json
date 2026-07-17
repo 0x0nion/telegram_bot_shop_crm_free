@@ -1,29 +1,29 @@
 {
   "user_main_menu": {
-    "buttons": {
-      "client_shop": {
-        "en": "Catalog",
-        "es": "Catálogo",
-        "ru": "Каталог"
-      },
-      "client_cart": {
-        "en": "Cart {cart}",
-        "es": "Carrito {cart}",
-        "ru": "Корзина {cart}"
-      },
-      "client_orders": {
-        "en": "Orders {orders}",
-        "es": "Pedidos {orders}",
-        "ru": "Заказы {orders}"
-      },
-      "client_settings": {
-        "en": "Settings",
-        "es": "Ajustes",
-        "ru": "Настройки"
-      }
+  "buttons": {
+    "client_shop": {
+      "en": "🛍️ Catalog",
+      "es": "🛍️ Catálogo",
+      "ru": "🛍️ Каталог"
     },
-    "sizes": [1, 2, 1]
+    "client_cart": {
+      "en": "🛒 Cart {cart}",
+      "es": "🛒 Carrito {cart}",
+      "ru": "🛒 Корзина {cart}"
+    },
+    "client_orders": {
+      "en": "📦 Orders {orders}",
+      "es": "📦 Pedidos {orders}",
+      "ru": "📦 Заказы {orders}"
+    },
+    "client_settings": {
+      "en": "⚙️ Settings",
+      "es": "⚙️ Ajustes",
+      "ru": "⚙️ Настройки"
+    }
   },
+  "sizes": [1, 2, 1]
+},
   "cancel": {
     "buttons": {
       "cancel_input": {

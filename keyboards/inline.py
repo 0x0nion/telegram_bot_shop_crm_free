@@ -13,7 +13,7 @@ def get_language_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="Русский 🇷🇺", callback_data="lang_ru")
     builder.button(text="English 🇺🇸", callback_data="lang_en")
-    builder.button(text="English 🇺🇸", callback_data="lang_es")
+    builder.button(text="Español 🇪🇸", callback_data="lang_es")
     builder.adjust(1)
     return builder.as_markup()
 
@@ -45,6 +45,46 @@ class InlineKb:
         except Exception as e:
             logger.critical(f"Failed to open/parse {self.locale_path}: {e}", exc_info=True)
             return None
+
+    def get_main_kb(self, orders: int, cart: int) -> Optional[InlineKeyboardMarkup]:
+        if self.template is None:
+            logger.critical("[INLINE KB] Keyboards template is missing (kb.json was not loaded)!")
+            return None
+
+        data = self.template.get("user_main_menu")
+        if data is None:
+            logger.critical("[INLINE KB] Keyboard with key 'user_main_menu' not found in kb.json!")
+            return None
+
+        buttons = data.get("buttons")
+        sizes = data.get("sizes")
+
+        if not buttons or not sizes:
+            logger.critical("[INLINE KB] Invalid structure (missing 'buttons' or 'sizes') for key 'user_main_menu'!")
+            return None
+
+        cart_str = f" ({cart})" if cart > 0 else ""
+        orders_str = f" ({orders})" if orders > 0 else ""
+
+        builder = InlineKeyboardBuilder()
+
+        for callback_data, translations in buttons.items():
+            button_text_template = translations.get(self.lang) or translations.get("en") or "XXX"
+
+            if not translations.get(self.lang):
+                logger.warning(f"[INLINE KB] Missing translation for lang '{self.lang}' in button '{callback_data}'")
+
+            try:
+                button_text = button_text_template.format(orders=orders_str, cart=cart_str)
+            except (KeyError, IndexError) as e:
+                logger.error(f"[INLINE KB] Failed to format button '{callback_data}': {e}")
+                button_text = button_text_template
+
+            builder.button(text=button_text, callback_data=callback_data)
+
+        builder.adjust(*sizes)
+
+        return builder.as_markup()
 
     def get_kb(self, key: str) -> Optional[InlineKeyboardMarkup]:
         if self.template is None:

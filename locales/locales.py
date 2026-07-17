@@ -38,7 +38,6 @@ class Locale:
         Форматирует весь чек заказа.
         template_key позволяет выбрать текст: успешное оформление или просто просмотр.
         """
-
         item_lines = []
         for item in order.items:
             product_name = item.product.name if item.product else "Deleted Product"
@@ -48,9 +47,17 @@ class Locale:
             )
         items_block = "\n".join(item_lines)
 
-        address_block = f"{order.delivery_address}\n\n" if order.delivery_address else ""
+        if order.delivery_address:
+            delivery_label = self.get_text("order_delivery_label")
+            address_block = f"📍 {delivery_label} {order.delivery_address}\n\n"
+        else:
+            address_block = ""
 
-        comment_block = f"📝 <b>Комментарий:</b> {order.user_comment}\n\n" if order.user_comment else ""
+        if order.user_comment:
+            comment_label = self.get_text("order_comment_label")
+            comment_block = f"📝 {comment_label} {order.user_comment}\n\n"
+        else:
+            comment_block = ""
 
         template = self.get_text(template_key)
 

@@ -2,6 +2,7 @@ from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
+from database.models import User
 from database.repositories.user_repo import UserRepository
 from handlers.cart.render_cart import render_cart
 from keyboards.inline import InlineKb
@@ -78,7 +79,7 @@ async def ask_comment(callback: CallbackQuery, user_repo: UserRepository, state:
     await state.update_data(cart_message_id=callback.message.message_id)
 
     await callback.message.edit_text(
-        text=Locale(user.language).get_text('user_set_address_error'),
+        text=Locale(user.language).get_text('user_set_comment'),
         reply_markup=InlineKb(user.language).get_kb('cancel')
     )
     await callback.answer()
@@ -126,10 +127,9 @@ async def update_quantity(callback: CallbackQuery, user_repo: UserRepository, st
 
 
 @user_cart_router.callback_query(F.data == "checkout_confirm")
-async def checkout_order(callback: CallbackQuery, user_repo: UserRepository, state: FSMContext):
+async def checkout_order(callback: CallbackQuery, user_repo: UserRepository, state: FSMContext, user: User):
     user_id = callback.from_user.id
 
-    user = await user_repo.get_user(user_id=user_id)
     locale = Locale(user.language)
 
     user_data = await state.get_data()
@@ -153,8 +153,13 @@ async def checkout_order(callback: CallbackQuery, user_repo: UserRepository, sta
 
     success_text = locale.format_order(order)
 
+    updated_user = await user_repo.get_user_with_cart(user_id=user_id)
+
     await callback.message.edit_text(
         text=success_text,
-        reply_markup=InlineKb(user.language).get_kb('user_main_menu')
+        reply_markup=InlineKb(user.language).get_main_kb(
+            orders=len(updated_user.orders),
+            cart=len(updated_user.cart)
+        )
     )
     await callback.answer()

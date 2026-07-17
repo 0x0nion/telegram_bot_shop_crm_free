@@ -1,4 +1,4 @@
-# state/admin_states.py (Примерный вид твоего файла состояний)
+# state/admin_states.py
 from aiogram.fsm.state import StatesGroup, State
 
 

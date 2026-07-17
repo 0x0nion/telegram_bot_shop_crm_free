@@ -3,7 +3,7 @@
     "user_main": "Стартовый текст магазина",
     "product_template": "<b>{name}</b>\n\n<i>{description}</i>\n\n<b>Цена:</b> {price} $ / {unit}",
     "user_set_address": "📍 Пришлите адрес текстом или отправьте геолокацию:",
-    "user_address_link": "📍Адрес доставки: <a href='{maps_url}'>Локация на карте</a>",
+    "user_address_link": "<a href='{maps_url}'>Локация на карте</a>",
     "user_set_address_error": "Пожалуйста, пришлите корректный адрес.",
     "user_set_comment": "📝 Напишите ваш комментарий к заказу:",
     "user_empty_cart": "❌ Ошибка: Ваша корзина пуста!",
@@ -23,16 +23,18 @@
     "cart_summary_subtotal": "\n💰 <b>Товары:</b> {subtotal:.2f} $\n",
     "cart_summary_delivery": "🚚 <b>Доставка:</b> {delivery:.2f} $\n",
     "cart_summary_total": "💵 <b>Итого:</b> {total:.2f} $\n\n",
-    "cart_address_label": "{address}\n",
-    "cart_address_not_specified": "\uD83D\uDCCDАдрес доставки: ❌ Не указан",
+    "cart_address_label": "📌 <b>Адрес доставки:</b> {address}\n",
+    "cart_address_not_specified": "❌ Не указан",
     "cart_comment_label": "📝 <b>Комментарий:</b> {comment}",
-    "cart_comment_not_specified": "Отсутствует"
+    "cart_comment_not_specified": "Отсутствует",
+    "order_delivery_label": "<b>Доставка:</b>",
+    "order_comment_label": "<b>Комментарий:</b>"
   },
   "en": {
     "user_main": "Start shop text",
     "product_template": "<b>{name}</b>\n\n<i>{description}</i>\n\n<b>Price:</b> {price} $ / {unit}",
     "user_set_address": "📍 Send the address as text or share your location:",
-    "user_address_link": "📍Delivery address: <a href='{maps_url}'>Location on the map</a>",
+    "user_address_link": "<a href='{maps_url}'>Location on map</a>",
     "user_set_address_error": "Please send a valid address.",
     "user_set_comment": "📝 Write your comment for the order:",
     "user_empty_cart": "❌ Error: Your cart is empty!",
@@ -52,16 +54,18 @@
     "cart_summary_subtotal": "\n💰 <b>Subtotal:</b> {subtotal:.2f} $\n",
     "cart_summary_delivery": "🚚 <b>Delivery:</b> {delivery:.2f} $\n",
     "cart_summary_total": "💵 <b>Total:</b> {total:.2f} $\n\n",
-    "cart_address_label": "{address}\n",
-    "cart_address_not_specified": "\uD83D\uDCCDDelivery address: ❌ Not specified",
+    "cart_address_label": "📌 <b>Delivery address:</b> {address}\n",
+    "cart_address_not_specified": "❌ Not specified",
     "cart_comment_label": "📝 <b>Comment:</b> {comment}",
-    "cart_comment_not_specified": "None"
+    "cart_comment_not_specified": "None",
+    "order_delivery_label": "<b>Delivery:</b>",
+    "order_comment_label": "<b>Comment:</b>"
   },
   "es": {
     "user_main": "Texto de apertura de la tienda",
     "product_template": "<b>{name}</b>\n\n<i>{description}</i>\n\n<b>Precio:</b> {price} $ / {unit}",
     "user_set_address": "📍 Envía la dirección por texto o comparte tu ubicación:",
-    "user_address_link": "📍Dirección de envío: <a href='{maps_url}'>Ubicación en el mapa</a>",
+    "user_address_link": "<a href='{maps_url}'>Ubicación en el mapa</a>",
     "user_set_address_error": "Por favor, envía una dirección válida.",
     "user_set_comment": "📝 Escribe tu comentario para el pedido:",
     "user_empty_cart": "❌ Error: ¡Tu carrito está vacío!",
@@ -81,9 +85,11 @@
     "cart_summary_subtotal": "\n💰 <b>Productos:</b> {subtotal:.2f} $\n",
     "cart_summary_delivery": "🚚 <b>Envío:</b> {delivery:.2f} $\n",
     "cart_summary_total": "💵 <b>Total:</b> {total:.2f} $\n\n",
-    "cart_address_label": "{address}\n",
+    "cart_address_label": "📌 <b>Dirección de envío:</b> {address}\n",
     "cart_comment_label": "📝 <b>Comentario:</b> {comment}",
-    "cart_address_not_specified": "\uD83D\uDCCDDirección de envío: ❌ No especificada",
-    "cart_comment_not_specified": "Ninguno"
+    "cart_address_not_specified": "❌ No especificada",
+    "cart_comment_not_specified": "Ninguno",
+    "order_delivery_label": "<b>Entrega:</b>",
+    "order_comment_label": "<b>Comentario:</b>"
   }
 }

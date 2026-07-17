@@ -3,8 +3,6 @@ from deep_translator import GoogleTranslator
 
 class LiveTranslator:
     def __init__(self):
-        # Инициализируем переводчики для нужных языков
-        # source="auto" означает, что библиотека сама поймет, на каком языке ввел текст пользователь
         self.to_en = GoogleTranslator(source='auto', target='en')
         self.to_es = GoogleTranslator(source='auto', target='es')
         self.to_ru = GoogleTranslator(source='auto', target='ru')

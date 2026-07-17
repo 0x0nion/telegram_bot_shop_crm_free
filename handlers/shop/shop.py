@@ -43,7 +43,7 @@ async def route_product_card(callback: CallbackQuery, shop_repo: ShopRepository,
         shop_repo=shop_repo,
         cart_item=len(user.cart),
         bot=callback.bot,
-        lang = user.language,
+        lang=user.language,
         old_message_id=callback.message.message_id
     )
 

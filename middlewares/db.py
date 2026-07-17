@@ -1,6 +1,6 @@
 from typing import Any, Awaitable, Callable, Dict
 from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject, Message, CallbackQuery
+from aiogram.types import TelegramObject, Message, CallbackQuery, Update
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from database.repositories.admin_repo import AdminRepository
@@ -19,9 +19,11 @@ class DbSessionMiddleware(BaseMiddleware):
             event: TelegramObject,
             data: Dict[str, Any]
     ) -> Any:
+        actual_event = event.event if isinstance(event, Update) else event
         tg_user = None
-        if isinstance(event, (Message, CallbackQuery)):
-            tg_user = event.from_user
+        if isinstance(actual_event, (Message, CallbackQuery)):
+            if actual_event.from_user:
+                tg_user = actual_event.from_user
 
         async with self.session_pool() as session:
             data["session"] = session
@@ -45,5 +47,4 @@ class DbSessionMiddleware(BaseMiddleware):
             except Exception:
                 await session.rollback()
                 raise
-            finally:
-                await session.close()
+

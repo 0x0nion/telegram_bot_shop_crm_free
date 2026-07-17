@@ -1,17 +1,22 @@
+import logging
+
 from aiogram import Router, F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery
 
+from database.models import User
 from database.repositories.user_repo import UserRepository
 from keyboards.inline import InlineKb
 from locales.locales import Locale
 
+logger = logging.getLogger(__name__)
 user_order_router = Router()
 
 
 @user_order_router.callback_query(F.data == "client_orders")
-async def show_pending_orders(callback: CallbackQuery, user_repo: UserRepository):
+async def show_pending_orders(callback: CallbackQuery, user_repo: UserRepository, user: User):
+    await callback.answer()
     user_id = callback.from_user.id
-    user = await user_repo.get_user(user_id=user_id)
 
     locale = Locale(user.language)
     kb_manager = InlineKb(user.language)
@@ -19,20 +24,22 @@ async def show_pending_orders(callback: CallbackQuery, user_repo: UserRepository
     orders = await user_repo.get_pending_orders(user_id)
 
     if not orders:
+        text = locale.get_text('user_empty_orders')
+        reply_markup = kb_manager.get_main_kb(orders=len(user.orders), cart=len(user.cart))
+    else:
+        text = locale.get_text('user_active_orders_title')
+        reply_markup = kb_manager.get_orders_kb(orders)
+
+    try:
         await callback.message.edit_text(
-            text=locale.get_text('user_empty_orders'),
-            reply_markup=kb_manager.get_kb('user_main_menu')
+            text=text,
+            reply_markup=reply_markup
         )
-        await callback.answer()
-        return
-
-    reply_markup = kb_manager.get_orders_kb(orders)
-
-    await callback.message.edit_text(
-        text=locale.get_text('user_active_orders_title'),
-        reply_markup=reply_markup
-    )
-    await callback.answer()
+    except TelegramBadRequest as e:
+        if "message is not modified" in e.message:
+            logger.info(f"User {user_id} double-clicked 'client_orders' (no changes).")
+        else:
+            raise
 
 
 @user_order_router.callback_query(F.data.startswith("view_details_order_"))

@@ -1,3 +1,4 @@
+# handlers/cart/render_cart.py
 from typing import Union
 from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
@@ -19,7 +20,7 @@ async def render_cart(
     if isinstance(event, CallbackQuery):
         await event.answer()
 
-    user = await user_repo.get_cart_with_products(user_id)
+    user = await user_repo.get_or_create_user(event.from_user)
     lang = user.language if user else "en"
 
     locale = Locale(lang)
@@ -33,19 +34,26 @@ async def render_cart(
 
     if not user or not user.cart:
         text = locale.get_text("cart_empty")
-        try:
-            if cart_msg_id:
+
+        orders_count = len(user.orders) if user and hasattr(user, "orders") else 0
+        main_kb = InlineKb(user.language).get_main_kb(orders=orders_count, cart=0)
+
+        if cart_msg_id:
+            try:
                 await bot.edit_message_text(
                     chat_id=chat_id,
                     message_id=cart_msg_id,
                     text=text,
-                    reply_markup=InlineKb(user.language).get_kb('user_main_menu')
+                    reply_markup=main_kb,
+                    parse_mode="HTML"
                 )
                 return
-        except TelegramBadRequest:
-            pass
+            except TelegramBadRequest as e:
+                if "message is not modified" in str(e).lower():
+                    return
+                pass
 
-        new_msg = await bot.send_message(chat_id=chat_id, text=text, parse_mode="HTML")
+        new_msg = await bot.send_message(chat_id=chat_id, text=text, reply_markup=main_kb, parse_mode="HTML")
         await state.update_data(cart_message_id=new_msg.message_id)
         return
 
@@ -77,29 +85,28 @@ async def render_cart(
     text_blocks.append(locale.get_text("cart_comment_label").format(comment=comm_text))
 
     text = "".join(text_blocks)
-
     markup = kb_manager.get_cart_kb(cart_items=user.cart, has_address=bool(address))
 
-    try:
-        if cart_msg_id:
+    if cart_msg_id:
+        try:
             await bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=cart_msg_id,
                 text=text,
                 reply_markup=markup,
+                parse_mode="HTML"
             )
-        else:
-            new_msg = await bot.send_message(
-                chat_id=chat_id,
-                text=text,
-                reply_markup=markup,
-            )
-            await state.update_data(cart_message_id=new_msg.message_id)
-    except TelegramBadRequest as e:
-        if "message is not modified" not in str(e).lower():
-            new_msg = await bot.send_message(
-                chat_id=chat_id,
-                text=text,
-                reply_markup=markup,
-            )
-            await state.update_data(cart_message_id=new_msg.message_id)
+            return
+        except TelegramBadRequest as e:
+            if "message is not modified" in str(e).lower():
+                return
+            pass
+
+    new_msg = await bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=markup,
+        parse_mode="HTML"
+    )
+    await state.update_data(cart_message_id=new_msg.message_id)
+

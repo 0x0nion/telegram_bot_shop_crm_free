@@ -18,8 +18,12 @@ class UserRepository(BaseRepository):
     async def get_user_with_cart(self, user_id: int) -> User | None:
         stmt = (
             select(User)
-            .options(selectinload(User.cart))
+            .options(
+                selectinload(User.cart).selectinload(CartItem.product),
+                selectinload(User.orders)
+            )
             .where(User.id == user_id)
+            .execution_options(populate_existing=True)
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -44,21 +48,16 @@ class UserRepository(BaseRepository):
         if not tg_user:
             return None
 
-        # Ищем пользователя сразу с подгрузкой корзины
         user = await self.get_user_with_cart(tg_user.id)
 
         if not user:
-            # Если не нашли — создаем
             user = await self.create_user(user_id=tg_user.id)
-            # Чтобы в только что созданном объекте была пустая коллекция cart, а не ошибка
             user.cart = []
+            user.orders = []
 
         return user
 
-
-
     async def add_to_cart(self, user_id: int, product_id: int) -> None:
-        # 1. Ищем, есть ли такой товар у пользователя в корзине
         stmt = select(CartItem).where(
             and_(CartItem.user_id == user_id, CartItem.product_id == product_id)
         )
@@ -66,17 +65,13 @@ class UserRepository(BaseRepository):
         cart_item = result.scalar_one_or_none()
 
         if cart_item:
-            # 2. Если есть — просто увеличиваем количество
             cart_item.quantity += 1
         else:
-            # 3. Если нет — создаем новую запись
             new_item = CartItem(user_id=user_id, product_id=product_id, quantity=1)
             self.session.add(new_item)
 
-        # 4. Сохраняем изменения
         await self.session.commit()
 
-    # В UserRepository
     async def get_cart_with_products(self, user_id: int):
         stmt = (
             select(User)
@@ -88,7 +83,6 @@ class UserRepository(BaseRepository):
         return user
 
     async def update_cart_item(self, user_id: int, product_id: int, change: int):
-        # 1. Находим товар в корзине через SQLAlchemy
         stmt = select(CartItem).where(
             and_(CartItem.user_id == user_id, CartItem.product_id == product_id)
         )
@@ -98,14 +92,11 @@ class UserRepository(BaseRepository):
         if not item:
             return
 
-        # 2. Изменяем количество
         item.quantity += change
 
         if item.quantity <= 0:
-            # 3. Если количество стало 0 или меньше — удаляем запись
             await self.session.delete(item)
 
-        # 4. Сохраняем изменения (commit фиксирует и обновление, и удаление)
         await self.session.commit()
 
     async def create_order_from_cart(self, user_id: int, delivery_address: str | None = None,
@@ -113,19 +104,15 @@ class UserRepository(BaseRepository):
         """
         Атомарно переносит товары из корзины в заказ и очищает корзину.
         """
-        # 1. Получаем корзину со всеми товарами и их ценами (используем твой готовый метод)
         user = await self.get_cart_with_products(user_id)
 
-        # Если корзины нет или она пуста
         if not user or not user.cart:
             return None
 
         total_price = 0.0
         order_items = []
 
-        # 2. Формируем список покупок и считаем итоговую сумму
         for cart_item in user.cart:
-            # Обязательно фиксируем цену товара на момент покупки
             current_price = float(cart_item.product.price)
             total_price += current_price * cart_item.quantity
 
@@ -137,22 +124,19 @@ class UserRepository(BaseRepository):
                 )
             )
 
-        # 3. Создаем главный объект заказа
         new_order = Order(
             user_id=user_id,
             total_price=total_price,
             delivery_address=delivery_address,
             user_comment=user_comment,
             status="pending",
-            items=order_items  # SQLAlchemy сама свяжет OrderItem с новым Order
+            items=order_items
         )
         self.session.add(new_order)
 
-        # 4. Очищаем корзину пользователя
         stmt = delete(CartItem).where(CartItem.user_id == user_id)
         await self.session.execute(stmt)
 
-        # 5. Фиксируем всю транзакцию
         await self.session.commit()
 
         stmt_select = (
@@ -178,7 +162,7 @@ class UserRepository(BaseRepository):
                     Order.status == "pending"
                 )
             )
-            .order_by(Order.created_at.desc())  # Свежие заказы сверху
+            .order_by(Order.created_at.desc())
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
@@ -195,7 +179,7 @@ class UserRepository(BaseRepository):
             .where(
                 and_(
                     Order.id == order_id,
-                    Order.user_id == user_id  # Защита: чужой заказ посмотреть нельзя
+                    Order.user_id == user_id
                 )
             )
         )
