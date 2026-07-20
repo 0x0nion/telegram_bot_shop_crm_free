@@ -52,8 +52,6 @@ class UserRepository(BaseRepository):
 
         if not user:
             user = await self.create_user(user_id=tg_user.id)
-            user.cart = []
-            user.orders = []
 
         return user
 
