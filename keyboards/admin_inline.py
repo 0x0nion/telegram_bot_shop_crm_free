@@ -113,6 +113,7 @@ class AdminInlineKb:
         del_text = nav_buttons.get("delete", {}).get(self.lang) or "❌ Delete"
         add_sub_text = nav_buttons.get("add_subcategory", {}).get(self.lang) or "🟢 Add Subcategory"
         add_prod_text = nav_buttons.get("add_product", {}).get(self.lang) or "🔴 Add Product Here"
+        add_tittle_text = nav_buttons.get("add_tittle", {}).get(self.lang) or "📝 Category details"
         save_text = nav_buttons.get("save_changes", {}).get(self.lang) or "💾 Save Changes"
 
         builder = InlineKeyboardBuilder()
@@ -142,6 +143,7 @@ class AdminInlineKb:
         cat_suffix = f"_{current_cat_id}" if current_cat_id else "_root"
         builder.row(InlineKeyboardButton(text=add_sub_text, callback_data=f"admin_addcat{cat_suffix}"))
         builder.row(InlineKeyboardButton(text=add_prod_text, callback_data=f"admin_add_item{cat_suffix}"))
+        builder.row(InlineKeyboardButton(text=add_tittle_text, callback_data=f"admin_add_tittle{cat_suffix}"))
         builder.row(InlineKeyboardButton(text=save_text, callback_data="admin_save_shop"))
 
         return builder.as_markup()

@@ -92,3 +92,64 @@ async def route_delete_category(callback: CallbackQuery, admin_repo: AdminReposi
     await admin_repo.delete_category(category_id_to_del, use_temp=True, admin_id=callback.from_user.id)
     await render_shop_menu(callback, admin_repo, parent_id, user=user)
     await callback.answer()
+
+
+@categories_router.callback_query(F.data.startswith("admin_add_tittle_"))
+async def start_edit_category_description(callback: CallbackQuery, state: FSMContext, user: User):
+    data_parts = callback.data.split("_")
+
+    # Определяем ID: если это "root" или отсутствует, ставим None (или 0 для базы)
+    raw_id = data_parts[3] if len(data_parts) > 3 else "root"
+    category_id = int(raw_id) if raw_id != "root" else None
+
+    lang = user.language if user.language in ["ru", "en", "es"] else "en"
+    kb = AdminInlineKb(lang=lang)
+
+    await state.update_data(category_id=category_id, menu_message_id=callback.message.message_id)
+    await state.set_state(AdminState.edit_category_description)
+
+    prompt_text = kb.get_text("prompts.category_desc", "✍️ Введите описание:")
+    back_callback = f"admin_shop_{raw_id}"
+
+    try:
+        await callback.message.edit_text(
+            prompt_text,
+            reply_markup=kb.get_cancel_add_category_kb(back_callback=back_callback)
+        )
+    except TelegramBadRequest:
+        pass
+
+    await callback.answer()
+
+
+@categories_router.message(AdminState.edit_category_description, F.text)
+async def process_edit_category_description(message: Message, state: FSMContext, admin_repo: AdminRepository,
+                                            user: User):
+    desc_text = message.text.strip()
+    user_data = await state.get_data()
+    category_id = user_data.get("category_id")  # Здесь может быть int или None (для root)
+    menu_message_id = user_data.get("menu_message_id")
+
+    lang = user.language if user.language in ["ru", "en", "es"] else "en"
+
+    # Для корневого меню (где category_id is None) можно сохранять с entity_id = 0
+    # или предусмотреть логику в репозитории. Передадим 0, если это корень.
+    target_entity_id = category_id if category_id is not None else 0
+
+    await admin_repo.update_temp_locale(
+        entity_id=target_entity_id,
+        entity_type="category",
+        language_code=lang,
+        text=desc_text,
+        admin_id=message.from_user.id
+    )
+
+    await state.clear()
+
+    try:
+        await message.delete()
+    except TelegramBadRequest:
+        pass
+
+    if menu_message_id:
+        await render_shop_menu(message, admin_repo, category_id, user=user, message_id_to_edit=menu_message_id)

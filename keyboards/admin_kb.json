@@ -75,6 +75,11 @@
         "es": "📝 Detalles de la categoría",
         "ru": "📝 Описание категории"
       },
+      "translate_btn": {
+        "en": "🌐 Translate",
+        "es": "🌐 Traducir",
+        "ru": "🌐 Перевести"
+      },
       "save_changes": {
         "en": "💾 Save Changes",
         "es": "💾 Guardar Cambios",

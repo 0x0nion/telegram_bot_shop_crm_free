@@ -16,13 +16,15 @@ async def show_admin_panel(
     """
     Единая точка входа для отображения админ-панели.
     """
+    admin_id = event.from_user.id
     if sync:
-        await admin_repo.sync_to_temp(admin_id=event.from_user.id)
+        await admin_repo.sync_to_temp(admin_id=admin_id)
 
     # Всегда берем из user.language
     lang = user.language if user.language in ["ru", "en", "es"] else "en"
     kb = AdminInlineKb(lang=lang)
 
+    # Чистый текст главного меню админки
     text = kb.get_text("welcome_title", "🔑 Панель администратора открыта:")
     if is_saved:
         text += kb.get_text("shop_updated", "\n\n✅ Магазин обновлен!")

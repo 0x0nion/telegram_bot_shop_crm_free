@@ -2,7 +2,7 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.exceptions import TelegramBadRequest
 
 from database.repositories.admin_repo import AdminRepository
-from keyboards.admin_inline import AdminInlineKb  # Оригинальный импорт
+from keyboards.admin_inline import AdminInlineKb
 from database.models.user import User
 
 
@@ -10,28 +10,44 @@ async def render_shop_menu(
         event: CallbackQuery | Message,
         admin_repo: AdminRepository,
         current_cat_id: int | None,
-        user: User,  # Обязательно передаем объект юзера
+        user: User,
         message_id_to_edit: int | None = None
 ):
     """Универсальная и безопасная функция отрисовки интерфейса магазина."""
     admin_id = event.from_user.id
     current_cat = None
 
-    # Всегда берем язык из БД, фолбек на "en"
     lang = user.language if user.language in ["ru", "en", "es"] else "en"
     kb = AdminInlineKb(lang=lang)
 
-    # 1. Формируем локализованный заголовок категории
     if current_cat_id:
         current_cat = await admin_repo.get_category_by_id(
             current_cat_id, use_temp=True, admin_id=admin_id
         )
         if current_cat:
             shop_caption = kb.get_text("category_title_template", "📁 Category: {name}\n").format(name=current_cat.name)
+
+            # Загружаем локализованный текст/описание категории из временной таблицы локалей (entity_type="category")
+            category_text = await admin_repo.get_locale_text(
+                entity_id=current_cat_id,
+                entity_type="category",
+                language_code=lang,
+                use_temp=True,
+                admin_id=admin_id
+            ) or current_cat.name
         else:
             shop_caption = kb.get_text("category_not_found", "📁 Category: Not found\n")
+            category_text = ""
     else:
         shop_caption = kb.get_text("root_menu_title", "🏪 (Main Menu)\n")
+        # Загружаем кастомное описание для корня (entity_id = 0) из временной таблицы локалей (entity_type="category")
+        category_text = await admin_repo.get_locale_text(
+            entity_id=0,
+            entity_type="category",
+            language_code=lang,
+            use_temp=True,
+            admin_id=admin_id
+        ) or kb.get_text("root_menu_description", "Welcome to the admin catalog management.")
 
     db_categories = await admin_repo.get_categories_by_parent(
         parent_id=current_cat_id, use_temp=True, admin_id=admin_id
@@ -40,18 +56,15 @@ async def render_shop_menu(
         category_id=current_cat_id, use_temp=True, admin_id=admin_id
     )
 
-    # 2. Собираем описание товаров
     if db_products:
         products_text = "\n".join([
             f"{product.id}: {product.name} - {product.price}"
             for product in db_products
         ])
-        text = f"{shop_caption}{'_' * 20}\n{products_text}"
+        text = f"{shop_caption}{category_text}\n{'_' * 20}\n{products_text}"
     else:
-        no_prod_message = kb.get_text("no_products", "\nThere are no products here yet.")
-        text = f"{shop_caption}{no_prod_message}"
+        text = f"{shop_caption}{category_text}"
 
-    # 3. Генерируем клавиатуру через метод нашего билдера
     parent_id = current_cat.parent_id if current_cat else None
     reply_markup = kb.get_shop_edit_kb(
         categories=db_categories,
@@ -60,7 +73,6 @@ async def render_shop_menu(
         parent_id=parent_id
     )
 
-    # 4. Отправляем или редактируем сообщение
     chat_id = event.message.chat.id if isinstance(event, CallbackQuery) else event.chat.id
     msg_id = message_id_to_edit or (event.message.message_id if isinstance(event, CallbackQuery) else None)
 
