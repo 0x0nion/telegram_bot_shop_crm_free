@@ -61,6 +61,7 @@ async def process_add_category(message: Message, state: FSMContext, admin_repo: 
     parent_id = user_data.get("parent_id")
     menu_message_id = user_data.get("menu_message_id")
 
+    # Внутри create_category автоматически запишутся локали для ru, en, es
     await admin_repo.create_category(
         name=category_name,
         parent_id=parent_id,
@@ -98,7 +99,6 @@ async def route_delete_category(callback: CallbackQuery, admin_repo: AdminReposi
 async def start_edit_category_description(callback: CallbackQuery, state: FSMContext, user: User):
     data_parts = callback.data.split("_")
 
-    # Определяем ID: если это "root" или отсутствует, ставим None (или 0 для базы)
     raw_id = data_parts[3] if len(data_parts) > 3 else "root"
     category_id = int(raw_id) if raw_id != "root" else None
 
@@ -127,19 +127,15 @@ async def process_edit_category_description(message: Message, state: FSMContext,
                                             user: User):
     desc_text = message.text.strip()
     user_data = await state.get_data()
-    category_id = user_data.get("category_id")  # Здесь может быть int или None (для root)
+    category_id = user_data.get("category_id")
     menu_message_id = user_data.get("menu_message_id")
 
-    lang = user.language if user.language in ["ru", "en", "es"] else "en"
-
-    # Для корневого меню (где category_id is None) можно сохранять с entity_id = 0
-    # или предусмотреть логику в репозитории. Передадим 0, если это корень.
     target_entity_id = category_id if category_id is not None else 0
 
-    await admin_repo.update_temp_locale(
+    # Обновляем/создаем описание сразу для всех поддерживаемых языков (ru, en, es)
+    await admin_repo.update_temp_locale_for_all_languages(
         entity_id=target_entity_id,
-        entity_type="category",
-        language_code=lang,
+        entity_type="category_description",
         text=desc_text,
         admin_id=message.from_user.id
     )

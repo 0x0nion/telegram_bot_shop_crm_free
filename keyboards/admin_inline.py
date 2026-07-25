@@ -94,7 +94,8 @@ class AdminInlineKb:
             categories: list,
             products: list,
             current_cat_id: int | None,
-            parent_id: int | None
+            parent_id: int | None,
+            category_names: dict[int, str] | None = None
     ) -> Optional[InlineKeyboardMarkup]:
         """Динамический конструктор управления категориями и товарами магазина"""
         if self.template is None:
@@ -125,10 +126,14 @@ class AdminInlineKb:
         else:
             builder.row(InlineKeyboardButton(text=to_main_text, callback_data="admin_mainmenu"))
 
-        # 2. Список подкатегорий (Имя категории + кнопка «Удалить»)
+        # 2. Список подкатегорий (Имя категории из словаря локалей/модели + кнопка «Удалить»)
         for category in categories:
+            cat_display_name = (
+                category_names.get(category.id) if category_names and category.id in category_names
+                else category.name
+            )
             builder.row(
-                InlineKeyboardButton(text=f"📁 {category.name}", callback_data=f"admin_shop_{category.id}"),
+                InlineKeyboardButton(text=f"📁 {cat_display_name}", callback_data=f"admin_shop_{category.id}"),
                 InlineKeyboardButton(text=del_text, callback_data=f"admin_del_cat_{category.id}")
             )
 

@@ -33,17 +33,22 @@ class TempLocaleText(Base):
     __tablename__ = "temp_locale_texts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    # Ссылка на временную сущность (например, TempProduct.id или TempCategory.id)
-    temp_entity_id: Mapped[int] = mapped_column(index=True)
-    # Тип: 'temp_category' или 'temp_product'
-    entity_type: Mapped[str] = mapped_column(String(50))
 
-    language_code: Mapped[str] = mapped_column(String(10))
-    text: Mapped[str] = mapped_column(Text)
+    # entity_id совпадает с ID записи в TempCategory/Category
+    entity_id: Mapped[int] = mapped_column(index=True)
+
+    # entity_type определяет тип текста: 'category_name', 'category_description' и т.д.
+    entity_type: Mapped[str] = mapped_column(String(50), index=True)
+
+    language_code: Mapped[str] = mapped_column(String(10), index=True)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
 
     admin_id: Mapped[int] = mapped_column(BigInteger, index=True)
 
     __table_args__ = (
-        UniqueConstraint("temp_entity_id", "entity_type", "language_code", "admin_id", name="uq_temp_locale"),
+        UniqueConstraint(
+            "entity_id", "entity_type", "language_code", "admin_id",
+            name="uq_temp_locale"
+        ),
     )
 

@@ -1,4 +1,3 @@
-# database/repositories/admin_repo.py
 from sqlalchemy import select, delete
 
 from database.models import LocaleText
@@ -9,6 +8,8 @@ from database.models.temp_models import TempCategory, TempProduct, TempLocaleTex
 
 
 class AdminRepository(BaseRepository):
+
+    SUPPORTED_LANGUAGES = ["ru", "en", "es"]
 
     # --- Методы синхронизации ---
 
@@ -55,23 +56,23 @@ class AdminRepository(BaseRepository):
 
         await self.session.flush()
 
-        # 4. Синхронизация локалей (включая корневое меню с entity_id = 0)
+        # 4. Синхронизация локалей
         locales_res = await self.session.execute(select(LocaleText))
         for loc in locales_res.scalars().all():
             target_id = None
             if loc.entity_id == 0:
                 target_id = 0
-            elif loc.entity_type == 'category':
+            elif "category" in loc.entity_type:
                 target_id = real_to_temp_cat_id.get(loc.entity_id)
-            elif loc.entity_type == 'product':
+            elif "product" in loc.entity_type:
                 temp_p = next((tp for p, tp in temp_prods_pairs if p.id == loc.entity_id), None)
                 if temp_p:
                     target_id = temp_p.id
 
             if target_id is not None:
                 self.session.add(TempLocaleText(
-                    temp_entity_id=target_id,
-                    entity_type=loc.entity_type,  # Сохраняем исходный тип ('category', 'product')
+                    entity_id=target_id,
+                    entity_type=loc.entity_type,
                     language_code=loc.language_code,
                     text=loc.text,
                     admin_id=admin_id
@@ -101,10 +102,9 @@ class AdminRepository(BaseRepository):
         else:
             await self.session.execute(delete(Category))
 
-        # Очистка старых локалей для удаленных сущностей (сохраняем корневые с entity_id = 0)
         await self.session.execute(delete(LocaleText).where(
-            ~((LocaleText.entity_id.in_(alive_prod_ids) & (LocaleText.entity_type == 'product')) |
-              (LocaleText.entity_id.in_(alive_cat_ids) & (LocaleText.entity_type == 'category')) |
+            ~((LocaleText.entity_id.in_(alive_prod_ids) & LocaleText.entity_type.like('%product%')) |
+              (LocaleText.entity_id.in_(alive_cat_ids) & LocaleText.entity_type.like('%category%')) |
               (LocaleText.entity_id == 0))
         ))
 
@@ -129,7 +129,7 @@ class AdminRepository(BaseRepository):
         for tc, new_cat in new_cats_pairs:
             temp_to_real_id[tc.id] = new_cat.id
 
-        # 2.1 Обновление parent_id для категорий
+        # 2.1 Обновление parent_id
         real_cats_all = await self.session.execute(select(Category))
         real_cats_all_dict = {c.id: c for c in real_cats_all.scalars().all()}
         for tc in temp_cats:
@@ -164,17 +164,14 @@ class AdminRepository(BaseRepository):
         for tp, new_prod in new_prods_pairs:
             temp_to_real_prod_id[tp.id] = new_prod.id
 
-        # 4. Финализация локалей (поддержка temp_entity_id = 0)
+        # 4. Финализация локалей
         for tl in temp_locales:
-            if tl.temp_entity_id == 0:
+            if tl.entity_id == 0:
                 real_id = 0
-                real_type = tl.entity_type
             elif "category" in tl.entity_type:
-                real_id = temp_to_real_id.get(tl.temp_entity_id)
-                real_type = "category"
+                real_id = temp_to_real_id.get(tl.entity_id)
             elif "product" in tl.entity_type:
-                real_id = temp_to_real_prod_id.get(tl.temp_entity_id)
-                real_type = "product"
+                real_id = temp_to_real_prod_id.get(tl.entity_id)
             else:
                 continue
 
@@ -182,7 +179,7 @@ class AdminRepository(BaseRepository):
                 existing_locale_res = await self.session.execute(
                     select(LocaleText).where(
                         LocaleText.entity_id == real_id,
-                        LocaleText.entity_type == real_type,
+                        LocaleText.entity_type == tl.entity_type,
                         LocaleText.language_code == tl.language_code
                     )
                 )
@@ -193,7 +190,7 @@ class AdminRepository(BaseRepository):
                 else:
                     self.session.add(LocaleText(
                         entity_id=real_id,
-                        entity_type=real_type,
+                        entity_type=tl.entity_type,
                         language_code=tl.language_code,
                         text=tl.text
                     ))
@@ -212,12 +209,10 @@ class AdminRepository(BaseRepository):
             use_temp: bool = False,
             admin_id: int = None
     ) -> str | None:
-        """
-        Универсальный метод получения перевода для сущности (боевой или временной).
-        """
+        """Получение перевода с правильным обращением к полю entity_id."""
         if use_temp:
             query = select(TempLocaleText.text).where(
-                TempLocaleText.temp_entity_id == entity_id,
+                TempLocaleText.entity_id == entity_id,
                 TempLocaleText.entity_type == entity_type,
                 TempLocaleText.language_code == language_code,
                 TempLocaleText.admin_id == admin_id
@@ -247,7 +242,8 @@ class AdminRepository(BaseRepository):
                                        admin_id: int = None) -> list:
         model = TempCategory if use_temp else Category
         query = select(model).where(model.parent_id == parent_id)
-        if use_temp: query = query.where(model.admin_id == admin_id)
+        if use_temp:
+            query = query.where(model.admin_id == admin_id)
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
@@ -255,7 +251,8 @@ class AdminRepository(BaseRepository):
                                 admin_id: int = None) -> Product | TempProduct | None:
         model = TempProduct if use_temp else Product
         query = select(model).where(model.id == product_id)
-        if use_temp: query = query.where(model.admin_id == admin_id)
+        if use_temp:
+            query = query.where(model.admin_id == admin_id)
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
@@ -263,30 +260,69 @@ class AdminRepository(BaseRepository):
                                        admin_id: int = None) -> list:
         model = TempProduct if use_temp else Product
         query = select(model).where(model.category_id == category_id)
-        if use_temp: query = query.where(model.admin_id == admin_id)
+        if use_temp:
+            query = query.where(model.admin_id == admin_id)
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
     # --- Создание ---
 
-    async def create_category(self, name: str, parent_id: int | None = None, use_temp: bool = False,
-                              admin_id: int = None):
+    async def create_category(
+            self,
+            name: str,
+            parent_id: int | None = None,
+            use_temp: bool = False,
+            admin_id: int = None
+    ) -> Category | TempCategory:
         model = TempCategory if use_temp else Category
         data = {"name": name, "parent_id": parent_id}
         if use_temp:
             data["admin_id"] = admin_id
 
-        new_item = model(**data)
-        self.session.add(new_item)
-        await self.session.commit()
-        return new_item
+        new_category = model(**data)
+        self.session.add(new_category)
+        await self.session.flush()
 
-    async def create_product(self, name: str, description: str, price: float, category_id: int | None,
-                             image_id: str | None = None, unit: str = "шт.", use_temp: bool = False,
-                             admin_id: int = None):
+        for lang_code in self.SUPPORTED_LANGUAGES:
+            if use_temp:
+                self.session.add(TempLocaleText(
+                    entity_id=new_category.id,
+                    entity_type="category_name",
+                    language_code=lang_code,
+                    text=name,
+                    admin_id=admin_id
+                ))
+            else:
+                self.session.add(LocaleText(
+                    entity_id=new_category.id,
+                    entity_type="category_name",
+                    language_code=lang_code,
+                    text=name
+                ))
+
+        await self.session.commit()
+        return new_category
+
+    async def create_product(
+            self,
+            name: str,
+            description: str,
+            price: float,
+            category_id: int | None,
+            image_id: str | None = None,
+            unit: str = "шт.",
+            use_temp: bool = False,
+            admin_id: int = None
+    ) -> Product | TempProduct:
         model = TempProduct if use_temp else Product
-        data = {"name": name, "description": description, "price": price, "category_id": category_id,
-                "image_id": image_id, "unit": unit}
+        data = {
+            "name": name,
+            "description": description,
+            "price": price,
+            "category_id": category_id,
+            "image_id": image_id,
+            "unit": unit
+        }
         if use_temp:
             data["admin_id"] = admin_id
 
@@ -298,7 +334,6 @@ class AdminRepository(BaseRepository):
     # --- Удаление и Обновление ---
 
     async def _get_temp_subcategory_ids(self, parent_id: int, admin_id: int, accumulated: list):
-        """Вспомогательный метод для рекурсивного сбора ID всех подкатегорий в Temp."""
         res = await self.session.execute(
             select(TempCategory.id).where(TempCategory.parent_id == parent_id, TempCategory.admin_id == admin_id)
         )
@@ -308,7 +343,6 @@ class AdminRepository(BaseRepository):
             await self._get_temp_subcategory_ids(s_id, admin_id, accumulated)
 
     async def _get_real_subcategory_ids(self, parent_id: int, accumulated: list):
-        """Вспомогательный метод для рекурсивного сбора ID всех подкатегорий в Prod."""
         res = await self.session.execute(select(Category.id).where(Category.parent_id == parent_id))
         sub_ids = res.scalars().all()
         for s_id in sub_ids:
@@ -316,36 +350,66 @@ class AdminRepository(BaseRepository):
             await self._get_real_subcategory_ids(s_id, accumulated)
 
     async def delete_category(self, category_id: int, use_temp: bool = False, admin_id: int = None):
-        """Удаление категории с каскадным рекурсивным удалением всех подкатегорий и их товаров."""
         if use_temp:
             all_cat_ids = [category_id]
             await self._get_temp_subcategory_ids(category_id, admin_id, all_cat_ids)
 
             await self.session.execute(
-                delete(TempProduct).where(TempProduct.category_id.in_(all_cat_ids), TempProduct.admin_id == admin_id))
+                delete(TempProduct).where(TempProduct.category_id.in_(all_cat_ids), TempProduct.admin_id == admin_id)
+            )
             await self.session.execute(
-                delete(TempCategory).where(TempCategory.id.in_(all_cat_ids), TempCategory.admin_id == admin_id))
+                delete(TempCategory).where(TempCategory.id.in_(all_cat_ids), TempCategory.admin_id == admin_id)
+            )
+            await self.session.execute(
+                delete(TempLocaleText).where(
+                    TempLocaleText.entity_id.in_(all_cat_ids),
+                    TempLocaleText.entity_type.like('%category%'),
+                    TempLocaleText.admin_id == admin_id
+                )
+            )
         else:
             all_cat_ids = [category_id]
             await self._get_real_subcategory_ids(category_id, all_cat_ids)
 
             await self.session.execute(delete(Product).where(Product.category_id.in_(all_cat_ids)))
             await self.session.execute(delete(Category).where(Category.id.in_(all_cat_ids)))
+            await self.session.execute(
+                delete(LocaleText).where(
+                    LocaleText.entity_id.in_(all_cat_ids),
+                    LocaleText.entity_type.like('%category%')
+                )
+            )
 
         await self.session.commit()
 
     async def delete_product(self, product_id: int, use_temp: bool = False, admin_id: int = None):
-        model = TempProduct if use_temp else Product
-        query = delete(model).where(model.id == product_id)
-        if use_temp: query = query.where(model.admin_id == admin_id)
-        await self.session.execute(query)
+        if use_temp:
+            await self.session.execute(
+                delete(TempProduct).where(TempProduct.id == product_id, TempProduct.admin_id == admin_id)
+            )
+            await self.session.execute(
+                delete(TempLocaleText).where(
+                    TempLocaleText.entity_id == product_id,
+                    TempLocaleText.entity_type.like('%product%'),
+                    TempLocaleText.admin_id == admin_id
+                )
+            )
+        else:
+            await self.session.execute(delete(Product).where(Product.id == product_id))
+            await self.session.execute(
+                delete(LocaleText).where(
+                    LocaleText.entity_id == product_id,
+                    LocaleText.entity_type.like('%product%')
+                )
+            )
         await self.session.commit()
 
     async def update_product_field(self, product_id: int, field: str, value: any, use_temp: bool = False,
                                    admin_id: int = None):
         model = TempProduct if use_temp else Product
         query = select(model).where(model.id == product_id)
-        if use_temp: query = query.where(model.admin_id == admin_id)
+        if use_temp:
+            query = query.where(model.admin_id == admin_id)
 
         result = await self.session.execute(query)
         item = result.scalar_one_or_none()
@@ -356,10 +420,9 @@ class AdminRepository(BaseRepository):
     # --- Работа с локалями (Temp) ---
 
     async def get_temp_locales(self, entity_id: int, entity_type: str, admin_id: int):
-        """Получает список всех локалей для временной сущности."""
         result = await self.session.execute(
             select(TempLocaleText).where(
-                TempLocaleText.temp_entity_id == entity_id,
+                TempLocaleText.entity_id == entity_id,
                 TempLocaleText.entity_type == entity_type,
                 TempLocaleText.admin_id == admin_id
             )
@@ -368,11 +431,9 @@ class AdminRepository(BaseRepository):
 
     async def update_temp_locale(self, entity_id: int, entity_type: str,
                                  language_code: str, text: str, admin_id: int):
-        """Обновляет или создает запись локали во временной таблице."""
-        # Пытаемся найти существующую
         result = await self.session.execute(
             select(TempLocaleText).where(
-                TempLocaleText.temp_entity_id == entity_id,
+                TempLocaleText.entity_id == entity_id,
                 TempLocaleText.entity_type == entity_type,
                 TempLocaleText.language_code == language_code,
                 TempLocaleText.admin_id == admin_id
@@ -384,7 +445,7 @@ class AdminRepository(BaseRepository):
             locale.text = text
         else:
             new_locale = TempLocaleText(
-                temp_entity_id=entity_id,
+                entity_id=entity_id,
                 entity_type=entity_type,
                 language_code=language_code,
                 text=text,
@@ -393,3 +454,19 @@ class AdminRepository(BaseRepository):
             self.session.add(new_locale)
 
         await self.session.commit()
+
+    async def update_temp_locale_for_all_languages(
+            self,
+            entity_id: int,
+            entity_type: str,
+            text: str,
+            admin_id: int
+    ):
+        for lang_code in self.SUPPORTED_LANGUAGES:
+            await self.update_temp_locale(
+                entity_id=entity_id,
+                entity_type=entity_type,
+                language_code=lang_code,
+                text=text,
+                admin_id=admin_id
+            )

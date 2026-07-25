@@ -25,25 +25,35 @@ async def render_shop_menu(
             current_cat_id, use_temp=True, admin_id=admin_id
         )
         if current_cat:
-            shop_caption = kb.get_text("category_title_template", "📁 Category: {name}\n").format(name=current_cat.name)
-
-            # Загружаем локализованный текст/описание категории из временной таблицы локалей (entity_type="category")
-            category_text = await admin_repo.get_locale_text(
+            # 1. Загружаем локализованное имя категории для заголовка
+            cat_name = await admin_repo.get_locale_text(
                 entity_id=current_cat_id,
-                entity_type="category",
+                entity_type="category_name",
                 language_code=lang,
                 use_temp=True,
                 admin_id=admin_id
             ) or current_cat.name
+
+            # 2. Загружаем описание категории
+            category_text = await admin_repo.get_locale_text(
+                entity_id=current_cat_id,
+                entity_type="category_description",
+                language_code=lang,
+                use_temp=True,
+                admin_id=admin_id
+            ) or ""
+
+            shop_caption = kb.get_text("category_title_template", "📁 Category: {name}\n").format(name=cat_name)
         else:
             shop_caption = kb.get_text("category_not_found", "📁 Category: Not found\n")
             category_text = ""
     else:
         shop_caption = kb.get_text("root_menu_title", "🏪 (Main Menu)\n")
-        # Загружаем кастомное описание для корня (entity_id = 0) из временной таблицы локалей (entity_type="category")
+
+        # Загружаем описание для корня (entity_id = 0)
         category_text = await admin_repo.get_locale_text(
             entity_id=0,
-            entity_type="category",
+            entity_type="category_description",
             language_code=lang,
             use_temp=True,
             admin_id=admin_id
@@ -56,6 +66,18 @@ async def render_shop_menu(
         category_id=current_cat_id, use_temp=True, admin_id=admin_id
     )
 
+    # Собираем словарь локализованных имен для кнопок категорий
+    category_names: dict[int, str] = {}
+    for cat in db_categories:
+        loc_name = await admin_repo.get_locale_text(
+            entity_id=cat.id,
+            entity_type="category_name",
+            language_code=lang,
+            use_temp=True,
+            admin_id=admin_id
+        )
+        category_names[cat.id] = loc_name or cat.name
+
     if db_products:
         products_text = "\n".join([
             f"{product.id}: {product.name} - {product.price}"
@@ -66,11 +88,14 @@ async def render_shop_menu(
         text = f"{shop_caption}{category_text}"
 
     parent_id = current_cat.parent_id if current_cat else None
+
+    # Передаем динамические имена кнопок в клавиатуру
     reply_markup = kb.get_shop_edit_kb(
         categories=db_categories,
         products=db_products,
         current_cat_id=current_cat_id,
-        parent_id=parent_id
+        parent_id=parent_id,
+        category_names=category_names
     )
 
     chat_id = event.message.chat.id if isinstance(event, CallbackQuery) else event.chat.id
