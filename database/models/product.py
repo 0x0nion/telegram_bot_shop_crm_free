@@ -1,3 +1,4 @@
+# database/models/product.py
 from typing import Optional
 from sqlalchemy import ForeignKey, String, Text, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
