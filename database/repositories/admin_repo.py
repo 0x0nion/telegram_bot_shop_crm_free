@@ -103,6 +103,7 @@ class AdminRepository(BaseRepository):
         else:
             await self.session.execute(delete(Category))
 
+        # Удаляем локали тех сущностей, которых больше нет (кроме корневых entity_id == 0, которые обрабатываются отдельно ниже)
         await self.session.execute(delete(LocaleText).where(
             ~((LocaleText.entity_id.in_(alive_prod_ids) & LocaleText.entity_type.like('%product%')) |
               (LocaleText.entity_id.in_(alive_cat_ids) & LocaleText.entity_type.like('%category%')) |
@@ -165,7 +166,10 @@ class AdminRepository(BaseRepository):
         for tp, new_prod in new_prods_pairs:
             temp_to_real_prod_id[tp.id] = new_prod.id
 
-        # 4. Финализация локалей
+        # 4. Финализация локалей (обновление, создание и очистка удаленных)
+        # Собираем список всех актуальных пар (real_id, entity_type, language_code) из временных таблиц
+        active_locale_keys = set()
+
         for tl in temp_locales:
             if tl.entity_id == 0:
                 real_id = 0
@@ -177,6 +181,8 @@ class AdminRepository(BaseRepository):
                 continue
 
             if real_id is not None:
+                active_locale_keys.add((real_id, tl.entity_type, tl.language_code))
+
                 existing_locale_res = await self.session.execute(
                     select(LocaleText).where(
                         LocaleText.entity_id == real_id,
@@ -195,6 +201,21 @@ class AdminRepository(BaseRepository):
                         language_code=tl.language_code,
                         text=tl.text
                     ))
+
+        # Удаляем из боевой таблицы те локали для существующих сущностей и корня, которые были стерты во временных
+        all_real_cat_ids = list(temp_to_real_id.values())
+        all_real_prod_ids = list(temp_to_real_prod_id.values())
+
+        existing_locales_res = await self.session.execute(
+            select(LocaleText).where(
+                (LocaleText.entity_id == 0) |
+                (LocaleText.entity_id.in_(all_real_cat_ids) & LocaleText.entity_type.like('%category%')) |
+                (LocaleText.entity_id.in_(all_real_prod_ids) & LocaleText.entity_type.like('%product%'))
+            )
+        )
+        for loc in existing_locales_res.scalars().all():
+            if (loc.entity_id, loc.entity_type, loc.language_code) not in active_locale_keys:
+                await self.session.delete(loc)
 
         # 5. Очистка временных
         await self.session.execute(delete(TempCategory).where(TempCategory.admin_id == admin_id))
@@ -471,3 +492,19 @@ class AdminRepository(BaseRepository):
                 text=text,
                 admin_id=admin_id
             )
+
+    async def delete_temp_locale_for_all_languages(
+            self,
+            entity_id: int,
+            entity_type: str,
+            admin_id: int
+    ):
+        """Удаляет все локализованные тексты для указанной сущности во всех языках (внутри временных данных)."""
+        await self.session.execute(
+            delete(TempLocaleText).where(
+                TempLocaleText.entity_id == entity_id,
+                TempLocaleText.entity_type == entity_type,
+                TempLocaleText.admin_id == admin_id
+            )
+        )
+        await self.session.commit()

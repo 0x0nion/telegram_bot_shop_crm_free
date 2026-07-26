@@ -18,11 +18,14 @@ categories_router = Router()
 async def route_shop_level(callback: CallbackQuery, admin_repo: AdminRepository, state: FSMContext, user: User):
     await state.clear()
 
+    admin_id = callback.from_user.id
     data_parts = callback.data.split("_")
     current_cat_id = None
 
     if len(data_parts) > 2 and data_parts[2] != "root":
         current_cat_id = int(data_parts[2])
+    else:
+        await admin_repo.sync_to_temp(admin_id=admin_id)
 
     await render_shop_menu(callback, admin_repo, current_cat_id, user=user)
     await callback.answer()
@@ -149,3 +152,23 @@ async def process_edit_category_description(message: Message, state: FSMContext,
 
     if menu_message_id:
         await render_shop_menu(message, admin_repo, category_id, user=user, message_id_to_edit=menu_message_id)
+
+
+@categories_router.callback_query(F.data.startswith("admin_del_tittle_"))
+async def route_delete_category_description(callback: CallbackQuery, admin_repo: AdminRepository, user: User):
+    data_parts = callback.data.split("_")
+    raw_id = data_parts[3] if len(data_parts) > 3 else "root"
+    category_id = int(raw_id) if raw_id != "root" else None
+
+    target_entity_id = category_id if category_id is not None else 0
+
+    # Удаляем описание во всех языках для этой категории или главного меню
+    await admin_repo.delete_temp_locale_for_all_languages(
+        entity_id=target_entity_id,
+        entity_type="category_description",
+        admin_id=callback.from_user.id
+    )
+
+    # Обновляем меню магазина
+    await render_shop_menu(callback, admin_repo, category_id, user=user)
+    await callback.answer()

@@ -21,6 +21,8 @@ async def render_shop_menu(
     lang = user.language if user.language in ["ru", "en", "es"] else "en"
     kb = AdminInlineKb(lang=lang)
 
+    has_description = False
+
     if current_cat_id:
         current_cat = await admin_repo.get_category_by_id(
             current_cat_id, use_temp=True, admin_id=admin_id
@@ -42,9 +44,14 @@ async def render_shop_menu(
                 language_code=lang,
                 use_temp=True,
                 admin_id=admin_id
-            ) or ""
+            )
 
             shop_caption = kb.get_text("category_title_template", "📁 Category: {name}\n").format(name=cat_name)
+
+            if category_text and category_text.strip():
+                has_description = True
+            else:
+                category_text = ""
         else:
             shop_caption = kb.get_text("category_not_found", "📁 Category: Not found\n")
             category_text = ""
@@ -58,7 +65,13 @@ async def render_shop_menu(
             language_code=lang,
             use_temp=True,
             admin_id=admin_id
-        ) or kb.get_text("root_menu_description", "Welcome to the admin catalog management.")
+        )
+
+        if category_text and category_text.strip():
+            has_description = True
+        else:
+            category_text = kb.get_text("root_menu_description", "Welcome to the admin catalog management.")
+            has_description = False
 
     db_categories = await admin_repo.get_categories_by_parent(
         parent_id=current_cat_id, use_temp=True, admin_id=admin_id
@@ -80,24 +93,33 @@ async def render_shop_menu(
         category_names[cat.id] = loc_name or cat.name
 
     currency = get_currency_symbol()
+
+    # Аккуратная сборка текста сообщения
+    body_parts = [shop_caption.strip()]
+    if category_text and category_text.strip():
+        body_parts.append(category_text.strip())
+
+    base_text = "\n".join(body_parts)
+
     if db_products:
         products_text = "\n".join([
             f"{product.id}: {product.name} - {product.price} {currency}"
             for product in db_products
         ])
-        text = f"{shop_caption}\n{category_text}\n{'_' * 20}\n{products_text}"
+        text = f"{base_text}\n{'_' * 20}\n{products_text}"
     else:
-        text = f"{shop_caption}\n{category_text}"
+        text = base_text
 
     parent_id = current_cat.parent_id if current_cat else None
 
-    # Передаем динамические имена кнопок в клавиатуру
+    # Передаем динамические имена кнопок и флаг наличия описания в клавиатуру
     reply_markup = kb.get_shop_edit_kb(
         categories=db_categories,
         products=db_products,
         current_cat_id=current_cat_id,
         parent_id=parent_id,
-        category_names=category_names
+        category_names=category_names,
+        has_description=has_description
     )
 
     chat_id = event.message.chat.id if isinstance(event, CallbackQuery) else event.chat.id
