@@ -4,6 +4,7 @@ from aiogram.exceptions import TelegramBadRequest
 from database.repositories.admin_repo import AdminRepository
 from keyboards.admin_inline import AdminInlineKb
 from database.models.user import User
+from locales.currencies import get_currency_symbol
 
 
 async def render_shop_menu(
@@ -78,14 +79,15 @@ async def render_shop_menu(
         )
         category_names[cat.id] = loc_name or cat.name
 
+    currency = get_currency_symbol()
     if db_products:
         products_text = "\n".join([
-            f"{product.id}: {product.name} - {product.price}"
+            f"{product.id}: {product.name} - {product.price} {currency}"
             for product in db_products
         ])
-        text = f"{shop_caption}{category_text}\n{'_' * 20}\n{products_text}"
+        text = f"{shop_caption}\n{category_text}\n{'_' * 20}\n{products_text}"
     else:
-        text = f"{shop_caption}{category_text}"
+        text = f"{shop_caption}\n{category_text}"
 
     parent_id = current_cat.parent_id if current_cat else None
 
