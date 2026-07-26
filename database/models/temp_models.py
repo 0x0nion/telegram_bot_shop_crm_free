@@ -2,7 +2,9 @@
 from typing import Optional
 from sqlalchemy import String, Text, Numeric, BigInteger, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
+
 from database.models.base import Base
+from locales.units import DEFAULT_UNIT
 
 
 class TempCategory(Base):
@@ -23,7 +25,7 @@ class TempProduct(Base):
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[Optional[str]] = mapped_column(Text)
     price: Mapped[float] = mapped_column(Numeric(10, 2))
-    unit: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    unit: Mapped[str] = mapped_column(String(20), default=DEFAULT_UNIT.value, nullable=False)
     image_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     category_id: Mapped[Optional[int]] = mapped_column(nullable=True)
     admin_id: Mapped[int] = mapped_column(BigInteger)
@@ -33,16 +35,10 @@ class TempLocaleText(Base):
     __tablename__ = "temp_locale_texts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-
-    # entity_id совпадает с ID записи в TempCategory/Category
     entity_id: Mapped[int] = mapped_column(index=True)
-
-    # entity_type определяет тип текста: 'category_name', 'category_description' и т.д.
     entity_type: Mapped[str] = mapped_column(String(50), index=True)
-
     language_code: Mapped[str] = mapped_column(String(10), index=True)
     text: Mapped[str] = mapped_column(Text, nullable=False)
-
     admin_id: Mapped[int] = mapped_column(BigInteger, index=True)
 
     __table_args__ = (
@@ -51,4 +47,3 @@ class TempLocaleText(Base):
             name="uq_temp_locale"
         ),
     )
-

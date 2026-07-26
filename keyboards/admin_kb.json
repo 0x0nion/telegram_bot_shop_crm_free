@@ -158,9 +158,9 @@
       "ru": "\nЗдесь пока нет товаров."
     },
     "product_card_template": {
-      "en": "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Price:</b> {price} {unit}",
-      "es": "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Precio:</b> {price} {unit}",
-      "ru": "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Цена:</b> {price} {unit}"
+      "en": "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Price:</b> {price} {currency} / {unit}",
+      "es": "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Precio:</b> {price} {currency} / {unit}",
+      "ru": "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Цена:</b> {price} {currency} / {unit}"
     },
     "no_description": {
       "en": "Description missing",

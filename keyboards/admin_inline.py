@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from locales.units import ProductUnit, UNIT_LABELS
 
 logger = logging.getLogger(__name__)
 
@@ -184,5 +185,34 @@ class AdminInlineKb:
         )
         builder.row(InlineKeyboardButton(text=edit_photo, callback_data=f"admin_edit_p_photo_{product_id}"))
         builder.row(InlineKeyboardButton(text=back_text, callback_data=f"admin_shop_{category_id}"))
+
+        return builder.as_markup()
+
+    def get_unit_selection_kb(self, product_id: int | None = None) -> Optional[InlineKeyboardMarkup]:
+        """Клавиатура выбора единицы измерения на основе ProductUnit."""
+        builder = InlineKeyboardBuilder()
+
+        # 1. Генерируем кнопки единиц измерения (итерируемся по items для точной типизации)
+        for unit_enum, labels in UNIT_LABELS.items():
+            label_text = labels.get(self.lang) or labels.get("en") or labels.get("ru") or unit_enum.value
+
+            if product_id is not None:
+                callback_data = f"admin_set_unit_{product_id}_{unit_enum.value}"
+            else:
+                callback_data = f"admin_select_unit_{unit_enum.value}"
+
+            builder.button(text=f"📦 {label_text}", callback_data=callback_data)
+
+        builder.adjust(3)
+
+        # 2. Достаем перевод "Отмена" из json (admin_category_actions.buttons.cancel)
+        cancel_text = "❌ Cancel"
+        if self.template:
+            cfg = self.template.get("admin_category_actions", {})
+            cancel_btn = cfg.get("buttons", {}).get("cancel", {})
+            cancel_text = cancel_btn.get(self.lang) or cancel_btn.get("en") or cancel_btn.get("ru") or cancel_text
+
+        cancel_callback = f"admin_edit_p_cancel_{product_id}" if product_id is not None else "admin_cancel_action"
+        builder.row(InlineKeyboardButton(text=cancel_text, callback_data=cancel_callback))
 
         return builder.as_markup()

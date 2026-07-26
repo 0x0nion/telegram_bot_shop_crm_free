@@ -7,8 +7,10 @@ from aiogram.exceptions import TelegramBadRequest
 
 from database.repositories.admin_repo import AdminRepository
 from keyboards.admin_inline import AdminInlineKb
+from locales.currencies import get_currency_symbol
 from state.admin_states import EditProduct
 from database.models.user import User
+from locales.units import get_unit_label
 
 editor_router = Router()
 logger = logging.getLogger(__name__)
@@ -31,11 +33,18 @@ async def show_product_card(chat_id: int, product_id: int, admin_repo: AdminRepo
     kb = AdminInlineKb(lang=lang)
 
     desc_val = product.description or kb.get_text("no_description", "Описание отсутствует")
-    unit_val = product.unit or kb.get_text("default_unit", "шт.")
+    unit_val = get_unit_label(product.unit, lang=lang)
+    currency_val = get_currency_symbol(getattr(product, "currency", None))
 
     text = kb.get_text("product_card_template",
-                       "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Цена:</b> {price} {unit}")
-    formatted_text = text.format(name=product.name, description=desc_val, price=product.price, unit=unit_val)
+                       "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Цена:</b> {price} {currency} / {unit}")
+    formatted_text = text.format(
+        name=product.name,
+        description=desc_val,
+        price=product.price,
+        currency=currency_val,
+        unit=unit_val
+    )
 
     category_id = product.category_id if product.category_id else "root"
     reply_markup = kb.get_product_editor_kb(product_id=product_id, category_id=category_id)
@@ -51,7 +60,6 @@ async def show_product_card(chat_id: int, product_id: int, admin_repo: AdminRepo
                              parse_mode="HTML")
     else:
         await bot.send_message(chat_id, text=formatted_text, reply_markup=reply_markup, parse_mode="HTML")
-
 
 @editor_router.callback_query(F.data.startswith("admin_item_"))
 async def route_product_card(callback: CallbackQuery, admin_repo: AdminRepository, user: User):
@@ -70,11 +78,27 @@ async def start_edit_product(callback: CallbackQuery, state: FSMContext, user: U
     lang = user.language if user.language in ["ru", "en", "es"] else "en"
     kb = AdminInlineKb(lang=lang)
 
+    # Если выбрано редактирование единицы измерения — выводим инлайн-клавиатуру с кнопками
+    if action == "unit":
+        prompt_text = kb.get_text("prompts.unit", "⚖️ Выберите единицу измерения:")
+        reply_markup = kb.get_unit_selection_kb(product_id=product_id)
+
+        if callback.message.photo:
+            try:
+                await callback.message.delete()
+            except TelegramBadRequest:
+                pass
+            await callback.message.answer(prompt_text, reply_markup=reply_markup)
+        else:
+            await callback.message.edit_text(prompt_text, reply_markup=reply_markup)
+
+        await callback.answer()
+        return
+
     state_mapping = {
         "name": EditProduct.name,
         "desc": EditProduct.description,
         "price": EditProduct.price,
-        "unit": EditProduct.unit,
         "photo": EditProduct.photo
     }
 
@@ -102,9 +126,24 @@ async def start_edit_product(callback: CallbackQuery, state: FSMContext, user: U
     await callback.answer()
 
 
+@editor_router.callback_query(F.data.startswith("admin_set_unit_"))
+async def set_product_unit(callback: CallbackQuery, admin_repo: AdminRepository, user: User):
+    """Обработчик выбора конкретной единицы измерения из инлайн-кнопок"""
+    parts = callback.data.split("_")
+    product_id = int(parts[3])
+    unit_code = parts[4]
+    lang = user.language if user.language in ["ru", "en", "es"] else "en"
+
+    await admin_repo.update_product_field(product_id, "unit", unit_code, use_temp=True,
+                                          admin_id=callback.from_user.id)
+
+    await show_product_card(callback.message.chat.id, product_id, admin_repo, callback.bot, callback.message.message_id,
+                            lang=lang)
+    await callback.answer()
+
+
 @editor_router.message(EditProduct.name, F.text)
 @editor_router.message(EditProduct.description, F.text)
-@editor_router.message(EditProduct.unit, F.text)
 @editor_router.message(EditProduct.price, F.text)
 @editor_router.message(EditProduct.photo)
 async def process_edit_input(message: Message, state: FSMContext, admin_repo: AdminRepository, user: User):
@@ -141,7 +180,7 @@ async def process_edit_input(message: Message, state: FSMContext, admin_repo: Ad
         await admin_repo.update_product_field(pid, "image_id", message.photo[-1].file_id, use_temp=True,
                                               admin_id=message.from_user.id)
     else:
-        field = "name" if "name" in curr_state else "description" if "description" in curr_state else "unit"
+        field = "name" if "name" in curr_state else "description"
         await admin_repo.update_product_field(pid, field, message.text.strip(), use_temp=True,
                                               admin_id=message.from_user.id)
 

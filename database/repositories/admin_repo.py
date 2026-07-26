@@ -5,6 +5,7 @@ from database.repositories.base_repo import BaseRepository
 from database.models.category import Category
 from database.models.product import Product
 from database.models.temp_models import TempCategory, TempProduct, TempLocaleText
+from locales.units import DEFAULT_UNIT
 
 
 class AdminRepository(BaseRepository):
@@ -310,7 +311,7 @@ class AdminRepository(BaseRepository):
             price: float,
             category_id: int | None,
             image_id: str | None = None,
-            unit: str = "шт.",
+            unit: str = DEFAULT_UNIT.value,  # <- По умолчанию подставляем 'pc'
             use_temp: bool = False,
             admin_id: int = None
     ) -> Product | TempProduct:

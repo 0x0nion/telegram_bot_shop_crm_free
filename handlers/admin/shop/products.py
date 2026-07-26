@@ -8,6 +8,7 @@ from filters.admin import IsAdminFilter
 from handlers.admin.shop.render_shop_menu import render_shop_menu
 from keyboards.admin_inline import AdminInlineKb
 from database.models.user import User
+from locales.units import DEFAULT_UNIT
 
 
 products_router = Router()
@@ -29,7 +30,6 @@ async def create_default_product(callback: CallbackQuery, admin_repo: AdminRepos
 
     default_name = kb.get_text("default_product_name", "Новый товар")
     default_desc = kb.get_text("default_product_desc", "Описание отсутствует")
-    default_unit = kb.get_text("default_unit", "шт.")
 
     await admin_repo.create_product(
         name=default_name,
@@ -37,7 +37,7 @@ async def create_default_product(callback: CallbackQuery, admin_repo: AdminRepos
         price=0.0,
         category_id=category_id,
         image_id=None,
-        unit=default_unit,
+        unit=DEFAULT_UNIT.value,
         use_temp=True,
         admin_id=callback.from_user.id
     )
