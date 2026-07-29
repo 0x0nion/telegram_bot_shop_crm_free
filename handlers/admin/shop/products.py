@@ -8,6 +8,7 @@ from database.models.user import User
 from database.repositories.admin_repo import AdminRepository
 from filters.admin import IsAdminFilter
 from handlers.admin.shop.render_shop_menu import render_shop_menu
+from handlers.admin.utils import get_user_lang, parse_id
 from keyboards.admin_inline import AdminInlineKb
 from locales.units import DEFAULT_UNIT
 
@@ -16,21 +17,6 @@ products_router.message.filter(IsAdminFilter())
 products_router.callback_query.filter(IsAdminFilter())
 
 logger = logging.getLogger(__name__)
-
-SUPPORTED_LANGUAGES = {"ru", "en", "es"}
-DEFAULT_LANGUAGE = "en"
-
-
-def _get_user_lang(user: User) -> str:
-    """DRY: Безопасное определение языка пользователя."""
-    if user and user.language in SUPPORTED_LANGUAGES:
-        return user.language
-    return DEFAULT_LANGUAGE
-
-
-def _parse_id(raw_value: str) -> int | None:
-    """DRY: Преобразование строкового ID из callback_data (с учетом 'root')."""
-    return int(raw_value) if raw_value and raw_value != "root" else None
 
 
 @products_router.callback_query(F.data.startswith("admin_add_item_"))
@@ -44,9 +30,9 @@ async def create_default_product(
 
     data_parts = callback.data.split("_")
     raw_id = data_parts[3] if len(data_parts) > 3 else "root"
-    category_id = _parse_id(raw_id)
+    category_id = parse_id(raw_id)
 
-    lang = _get_user_lang(user)
+    lang = get_user_lang(user)
     kb = AdminInlineKb(lang=lang)
 
     default_name = kb.get_text("default_product_name", "Новый товар")
@@ -96,7 +82,7 @@ async def route_delete_product(
 
     await render_shop_menu(callback, admin_repo, category_id, user=user)
 
-    lang = _get_user_lang(user)
+    lang = get_user_lang(user)
     kb = AdminInlineKb(lang=lang)
 
     alert_text = kb.get_text("alerts.product_deleted", "🗑 Товар удален")

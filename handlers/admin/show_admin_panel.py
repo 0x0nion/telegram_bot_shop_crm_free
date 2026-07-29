@@ -4,17 +4,8 @@ from aiogram.types import CallbackQuery, Message
 
 from database.models.user import User
 from database.repositories.admin_repo import AdminRepository
+from handlers.admin.utils import get_user_lang
 from keyboards.admin_inline import AdminInlineKb
-
-SUPPORTED_LANGUAGES = {"ru", "en", "es"}
-DEFAULT_LANGUAGE = "en"
-
-
-def _get_user_lang(user: User) -> str:
-    """DRY: Безопасное определение языка пользователя."""
-    if user and user.language in SUPPORTED_LANGUAGES:
-        return user.language
-    return DEFAULT_LANGUAGE
 
 
 async def show_admin_panel(
@@ -30,7 +21,7 @@ async def show_admin_panel(
     if sync:
         await admin_repo.sync_to_temp(admin_id=admin_id)
 
-    lang = _get_user_lang(user)
+    lang = get_user_lang(user)
     kb = AdminInlineKb(lang=lang)
 
     # Формирование текста

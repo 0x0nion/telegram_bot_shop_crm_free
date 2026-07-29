@@ -4,18 +4,9 @@ from aiogram.types import CallbackQuery, Message
 
 from database.models.user import User
 from database.repositories.admin_repo import AdminRepository
+from handlers.admin.utils import get_user_lang
 from keyboards.admin_inline import AdminInlineKb
 from locales.currencies import get_currency_symbol
-
-SUPPORTED_LANGUAGES = {"ru", "en", "es"}
-DEFAULT_LANGUAGE = "en"
-
-
-def _get_user_lang(user: User) -> str:
-    """DRY: Безопасное определение языка пользователя."""
-    if user and user.language in SUPPORTED_LANGUAGES:
-        return user.language
-    return DEFAULT_LANGUAGE
 
 
 async def render_shop_menu(
@@ -27,7 +18,7 @@ async def render_shop_menu(
 ) -> None:
     """Универсальная и безопасная функция отрисовки интерфейса магазина."""
     admin_id = event.from_user.id
-    lang = _get_user_lang(user)
+    lang = get_user_lang(user)
     kb = AdminInlineKb(lang=lang)
 
     current_cat = None

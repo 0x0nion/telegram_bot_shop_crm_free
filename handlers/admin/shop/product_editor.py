@@ -7,6 +7,7 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.exceptions import TelegramBadRequest
 
 from database.repositories.admin_repo import AdminRepository
+from handlers.admin.utils import get_user_lang, self_destruct
 from keyboards.admin_inline import AdminInlineKb
 from locales.currencies import get_currency_symbol
 from state.admin_states import EditProduct
@@ -15,25 +16,6 @@ from locales.units import get_unit_label
 
 editor_router = Router()
 logger = logging.getLogger(__name__)
-
-SUPPORTED_LANGUAGES = {"ru", "en", "es"}
-DEFAULT_LANGUAGE = "en"
-
-
-def _get_user_lang(user: User) -> str:
-    """DRY: Безопасное определение языка пользователя."""
-    if user and user.language in SUPPORTED_LANGUAGES:
-        return user.language
-    return DEFAULT_LANGUAGE
-
-
-async def self_destruct(message: Message, seconds: int = 3):
-    """Автоматическое удаление служебного сообщения через заданное время."""
-    await asyncio.sleep(seconds)
-    try:
-        await message.delete()
-    except TelegramBadRequest:
-        pass
 
 
 async def show_product_card(
@@ -104,7 +86,7 @@ async def route_product_card(
 ):
     data_parts = callback.data.split("_")
     product_id = int(data_parts[2]) if len(data_parts) > 2 else 0
-    lang = _get_user_lang(user)
+    lang = get_user_lang(user)
 
     await show_product_card(
         callback.message.chat.id,
@@ -125,7 +107,7 @@ async def start_edit_product(
     action = data_parts[3] if len(data_parts) > 3 else ""
     product_id = int(data_parts[4]) if len(data_parts) > 4 else 0
 
-    lang = _get_user_lang(user)
+    lang = get_user_lang(user)
     kb = AdminInlineKb(lang=lang)
 
     # Если выбрано редактирование единицы измерения
@@ -196,7 +178,7 @@ async def set_product_unit(
     parts = callback.data.split("_")
     product_id = int(parts[3]) if len(parts) > 3 else 0
     unit_code = parts[4] if len(parts) > 4 else ""
-    lang = _get_user_lang(user)
+    lang = get_user_lang(user)
 
     await admin_repo.update_product_field(
         product_id,
@@ -232,7 +214,7 @@ async def process_edit_input(
     old_msg_id = data.get("message_id")
     curr_state = await state.get_state()
 
-    lang = _get_user_lang(user)
+    lang = get_user_lang(user)
     kb = AdminInlineKb(lang=lang)
 
     try:
@@ -255,7 +237,7 @@ async def process_edit_input(
                 "errors.invalid_price", "❌ Ошибка! Введите корректное число."
             )
             err = await message.answer(err_msg)
-            asyncio.create_task(self_delta := asyncio.create_task(self_destruct(err))) # type: ignore
+            asyncio.create_task(self_destruct(err))
             return
         await admin_repo.update_product_field(
             pid,

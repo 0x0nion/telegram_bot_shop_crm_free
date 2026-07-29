@@ -7,25 +7,11 @@ from aiogram.types import CallbackQuery, Message
 from database.models.user import User
 from database.repositories.admin_repo import AdminRepository
 from handlers.admin.shop.render_shop_menu import render_shop_menu
+from handlers.admin.utils import get_user_lang, parse_id
 from keyboards.admin_inline import AdminInlineKb
 from state.admin_states import AdminState
 
 categories_router = Router()
-
-SUPPORTED_LANGUAGES = {"ru", "en", "es"}
-DEFAULT_LANGUAGE = "en"
-
-
-def _get_user_lang(user: User) -> str:
-    """DRY: Безопасное определение языка пользователя."""
-    if user and user.language in SUPPORTED_LANGUAGES:
-        return user.language
-    return DEFAULT_LANGUAGE
-
-
-def _parse_category_id(raw_value: str) -> int | None:
-    """DRY: Преобразование строкового ID из callback_data (с учетом 'root')."""
-    return int(raw_value) if raw_value and raw_value != "root" else None
 
 
 @categories_router.callback_query(F.data == "admin_shop")
@@ -44,7 +30,7 @@ async def route_shop_level(
 
     data_parts = callback.data.split("_")
     raw_id = data_parts[2] if len(data_parts) > 2 else "root"
-    current_cat_id = _parse_category_id(raw_id)
+    current_cat_id = parse_id(raw_id)
 
     # Синхронизация здесь намеренно отсутствует:
     # сессия инициализируется строго один раз при входе через "Редактировать каталог".
@@ -59,9 +45,9 @@ async def route_add_category_start(
 ):
     data_parts = callback.data.split("_")
     raw_id = data_parts[2] if len(data_parts) > 2 else "root"
-    parent_id = _parse_category_id(raw_id)
+    parent_id = parse_id(raw_id)
 
-    lang = _get_user_lang(user)
+    lang = get_user_lang(user)
     kb = AdminInlineKb(lang=lang)
 
     await state.update_data(
@@ -141,9 +127,9 @@ async def start_edit_category_description(
 ):
     data_parts = callback.data.split("_")
     raw_id = data_parts[3] if len(data_parts) > 3 else "root"
-    category_id = _parse_category_id(raw_id)
+    category_id = parse_id(raw_id)
 
-    lang = _get_user_lang(user)
+    lang = get_user_lang(user)
     kb = AdminInlineKb(lang=lang)
 
     await state.update_data(
@@ -213,7 +199,7 @@ async def route_delete_category_description(
 ):
     data_parts = callback.data.split("_")
     raw_id = data_parts[3] if len(data_parts) > 3 else "root"
-    category_id = _parse_category_id(raw_id)
+    category_id = parse_id(raw_id)
 
     target_entity_id = category_id if category_id is not None else 0
 

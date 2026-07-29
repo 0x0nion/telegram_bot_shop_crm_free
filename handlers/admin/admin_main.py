@@ -8,20 +8,11 @@ from database.models.user import User
 from database.repositories.admin_repo import AdminRepository
 from handlers.admin.show_admin_panel import show_admin_panel
 from handlers.admin.shop.render_shop_menu import render_shop_menu
+from handlers.admin.utils import get_user_lang
 from keyboards.admin_inline import AdminInlineKb
 
 admin_main_router = Router()
 logger = logging.getLogger(__name__)
-
-SUPPORTED_LANGUAGES = {"ru", "en", "es"}
-DEFAULT_LANGUAGE = "en"
-
-
-def _get_user_lang(user: User) -> str:
-    """DRY: Безопасное определение языка пользователя."""
-    if user and user.language in SUPPORTED_LANGUAGES:
-        return user.language
-    return DEFAULT_LANGUAGE
 
 
 @admin_main_router.message(Command("admin"))
@@ -36,7 +27,7 @@ async def cmd_admin_entry(
 @admin_main_router.callback_query(F.data == "admin_shop_settings")
 async def cb_shop_settings(callback: CallbackQuery, user: User):
     """Открытие подменю 'Настройка магазина'."""
-    lang = _get_user_lang(user)
+    lang = get_user_lang(user)
     kb = AdminInlineKb(lang=lang)
 
     markup = kb.get_shop_settings_kb()
@@ -85,7 +76,7 @@ async def catch_other_admin_actions(callback: CallbackQuery, user: User):
     parts = callback.data.split("_")
     action = parts[1] if len(parts) > 1 else "default"
 
-    lang = _get_user_lang(user)
+    lang = get_user_lang(user)
     kb = AdminInlineKb(lang=lang)
 
     alert_message = kb.get_text(f"alerts.{action}") or kb.get_text(
