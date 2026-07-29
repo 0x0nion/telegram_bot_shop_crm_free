@@ -2,6 +2,7 @@
 import asyncio
 import logging
 from aiogram import F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
@@ -95,7 +96,6 @@ async def start_edit_product(
     lang = get_user_lang(user)
     kb = AdminInlineKb(lang=lang)
 
-    # Если выбрано редактирование единицы измерения
     if action == "unit":
         prompt_text = kb.get_text(
             "prompts.unit", "⚖️ Выберите единицу измерения:"
@@ -130,7 +130,6 @@ async def start_edit_product(
         "prompts.default", "Введите данные:"
     )
 
-    # Запоминаем ID текущего сообщения, чтобы в дальнейшем заменить его обратно на карточку
     await state.update_data(
         product_id=product_id, menu_message_id=callback.message.message_id
     )
@@ -146,7 +145,6 @@ async def start_edit_product(
 async def set_product_unit(
         callback: CallbackQuery, admin_repo: AdminRepository, user: User
 ):
-    """Обработчик выбора конкретной единицы измерения из инлайн-кнопок."""
     parts = callback.data.split("_")
     product_id = int(parts[3]) if len(parts) > 3 else 0
     unit_code = parts[4] if len(parts) > 4 else ""
@@ -236,7 +234,6 @@ async def process_edit_input(
 
     await state.clear()
 
-    # Возвращаем пользователя обратно в карточку товара в то же исходное сообщение
     if menu_message_id:
         await show_product_card(
             event=message,

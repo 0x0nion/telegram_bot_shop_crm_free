@@ -11,6 +11,7 @@ from handlers.admin.shop.render_shop_menu import render_shop_menu
 from handlers.admin.utils import get_user_lang
 from keyboards.admin_inline import AdminInlineKb
 from src.core.ui import UIManager
+from src.services.admin_shop_service import AdminShopService
 
 admin_main_router = Router()
 logger = logging.getLogger(__name__)
@@ -19,10 +20,10 @@ logger = logging.getLogger(__name__)
 @admin_main_router.message(Command("admin"))
 @admin_main_router.callback_query(F.data == "admin")
 async def cmd_admin_entry(
-        event: Message | CallbackQuery, admin_repo: AdminRepository, user: User
+    event: Message | CallbackQuery, user: User
 ):
     """Единая точка входа в админ-панель (DRY)."""
-    await show_admin_panel(event, admin_repo, user=user, sync=False)
+    await show_admin_panel(event, user=user)
 
 
 @admin_main_router.callback_query(F.data == "admin_shop_settings")
@@ -44,34 +45,50 @@ async def cb_shop_settings(callback: CallbackQuery, user: User):
 
 @admin_main_router.callback_query(F.data == "admin_shop_start")
 async def cb_open_shop_root(
-        callback: CallbackQuery, admin_repo: AdminRepository, user: User
+    callback: CallbackQuery,
+    admin_service: AdminShopService,
+    admin_repo: AdminRepository,
+    user: User
 ):
-    """Единственная точка старта сессии: синхронизация + открытие корня каталога."""
-    await admin_repo.sync_to_temp(admin_id=callback.from_user.id)
+    """Единственная точка старта сессии: синхронизация через сервис + открытие корня каталога."""
+    await admin_service.start_editing_session(admin_id=callback.from_user.id)
     await render_shop_menu(callback, admin_repo, current_cat_id=None, user=user)
     await callback.answer()
 
 
 @admin_main_router.callback_query(F.data == "admin_save_shop")
 async def cb_admin_save(
-        callback: CallbackQuery, admin_repo: AdminRepository, user: User
+    callback: CallbackQuery,
+    admin_service: AdminShopService,
+    user: User
 ):
-    await admin_repo.commit_changes(admin_id=callback.from_user.id)
+    """Сохранение изменений через сервис."""
+    await admin_service.save_editing_session(admin_id=callback.from_user.id)
     await show_admin_panel(
-        callback, admin_repo, user=user, is_saved=True, sync=True
+        callback, user=user, is_saved=True
     )
 
 
 @admin_main_router.callback_query(F.data == "admin_mainmenu")
 async def back_to_main_menu(
-        callback: CallbackQuery, admin_repo: AdminRepository, user: User
+    callback: CallbackQuery, user: User
 ):
-    await show_admin_panel(callback, admin_repo, user=user, sync=False)
+    await show_admin_panel(callback, user=user)
 
 
-@admin_main_router.callback_query(F.data.startswith("admin_"))
+@admin_main_router.callback_query(
+    F.data.startswith("admin_")
+    & ~F.data.startswith("admin_shop")
+    & ~F.data.startswith("admin_add")
+    & ~F.data.startswith("admin_del")
+    & ~F.data.startswith("admin_item")
+    & ~F.data.startswith("admin_edit")
+    & ~F.data.startswith("admin_set")
+    & ~F.data.startswith("admin_save")
+    & ~F.data.startswith("admin_mainmenu")
+)
 async def catch_other_admin_actions(callback: CallbackQuery, user: User):
-    """Заглушка для нереализованных разделов админки."""
+    """Безопасная заглушка для нереализованных разделов админки (без ложных срабатываний)."""
     parts = callback.data.split("_")
     action = parts[1] if len(parts) > 1 else "default"
 

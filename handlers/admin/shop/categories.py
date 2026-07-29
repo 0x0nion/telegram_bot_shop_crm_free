@@ -33,9 +33,6 @@ async def route_shop_level(
     raw_id = data_parts[2] if len(data_parts) > 2 else "root"
     current_cat_id = parse_id(raw_id)
 
-    # Синхронизация здесь намеренно отсутствует:
-    # сессия инициализируется строго один раз при входе через "Редактировать каталог".
-
     await render_shop_menu(callback, admin_repo, current_cat_id, user=user)
     await callback.answer()
 
@@ -57,7 +54,6 @@ async def route_add_category_start(
     await state.set_state(AdminState.add_category)
 
     back_callback = f"admin_shop_{raw_id}"
-
     text = kb.get_text(
         "enter_category_name", "✍️ Введите **название** для новой категории:"
     )

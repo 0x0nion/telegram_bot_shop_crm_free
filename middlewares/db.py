@@ -1,3 +1,4 @@
+# middlewares/db.py
 from typing import Any, Awaitable, Callable, Dict
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Message, CallbackQuery, Update
@@ -6,6 +7,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from database.repositories.admin_repo import AdminRepository
 from database.repositories.shop_repo import ShopRepository
 from database.repositories.user_repo import UserRepository
+from src.services.admin_shop_service import AdminShopService
 
 
 class DbSessionMiddleware(BaseMiddleware):
@@ -32,9 +34,13 @@ class DbSessionMiddleware(BaseMiddleware):
             user_repo = UserRepository(session)
             shop_repo = ShopRepository(session)
 
+            # Создаем сервис и прокидываем в него репозиторий
+            admin_shop_service = AdminShopService(admin_repo)
+
             data["admin_repo"] = admin_repo
             data["user_repo"] = user_repo
             data["shop_repo"] = shop_repo
+            data["admin_service"] = admin_shop_service  # <-- Передаем в контекст хендлеров
 
             db_user = None
             if tg_user:
@@ -47,4 +53,3 @@ class DbSessionMiddleware(BaseMiddleware):
             except Exception:
                 await session.rollback()
                 raise
-

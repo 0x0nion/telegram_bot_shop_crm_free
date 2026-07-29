@@ -72,7 +72,6 @@ async def render_shop_menu(
             or ""
         )
 
-        # Проверяем реальное наличие пользовательского описания ДО подстановки дефолта
         if raw_category_text.strip():
             has_description = True
             category_text = raw_category_text
@@ -82,7 +81,6 @@ async def render_shop_menu(
                 "Welcome to the admin catalog management.",
             )
 
-    # Для подкатегорий проверяем description отдельно, если еще не проверили
     if current_cat_id and category_text.strip():
         has_description = True
 
@@ -93,7 +91,6 @@ async def render_shop_menu(
         category_id=current_cat_id, use_temp=True, admin_id=admin_id
     )
 
-    # Собираем словарь локализованных имен для кнопок категорий
     category_names: dict[int, str] = {}
     for cat in db_categories:
         loc_name = await admin_repo.get_locale_text(
@@ -107,7 +104,6 @@ async def render_shop_menu(
 
     currency = get_currency_symbol()
 
-    # Сборка текста сообщения
     body_parts = [shop_caption.strip()]
     if category_text.strip():
         body_parts.append(category_text.strip())
