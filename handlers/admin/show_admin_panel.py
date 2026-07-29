@@ -1,9 +1,20 @@
+# handlers/admin/show_admin_panel.py
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
+from database.models.user import User
 from database.repositories.admin_repo import AdminRepository
 from keyboards.admin_inline import AdminInlineKb
-from database.models.user import User
+
+SUPPORTED_LANGUAGES = {"ru", "en", "es"}
+DEFAULT_LANGUAGE = "en"
+
+
+def _get_user_lang(user: User) -> str:
+    """DRY: Безопасное определение языка пользователя."""
+    if user and user.language in SUPPORTED_LANGUAGES:
+        return user.language
+    return DEFAULT_LANGUAGE
 
 
 async def show_admin_panel(
@@ -11,20 +22,18 @@ async def show_admin_panel(
     admin_repo: AdminRepository,
     user: User,
     is_saved: bool = False,
-    sync: bool = False
-):
-    """
-    Единая точка входа для отображения админ-панели.
-    """
+    sync: bool = False,
+) -> None:
+    """Единая точка входа для отображения админ-панели."""
     admin_id = event.from_user.id
+
     if sync:
         await admin_repo.sync_to_temp(admin_id=admin_id)
 
-    # Всегда берем из user.language
-    lang = user.language if user.language in ["ru", "en", "es"] else "en"
+    lang = _get_user_lang(user)
     kb = AdminInlineKb(lang=lang)
 
-    # Чистый текст главного меню админки
+    # Формирование текста
     text = kb.get_text("welcome_title", "🔑 Панель администратора открыта:")
     if is_saved:
         text += kb.get_text("shop_updated", "\n\n✅ Магазин обновлен!")
@@ -38,8 +47,9 @@ async def show_admin_panel(
         else:
             await event.answer(text, reply_markup=reply_markup)
     except TelegramBadRequest as e:
-        if "message is not modified" in str(e):
-            if isinstance(event, CallbackQuery):
-                await event.answer()
+        if "message is not modified" in str(e) and isinstance(
+            event, CallbackQuery
+        ):
+            await event.answer()
         else:
             raise e
