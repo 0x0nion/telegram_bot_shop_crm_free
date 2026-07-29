@@ -1,3 +1,4 @@
+# keyboards/admin_inline.py
 import json
 import logging
 from pathlib import Path
@@ -257,5 +258,30 @@ class AdminInlineKb:
 
         cancel_callback = f"admin_edit_p_cancel_{product_id}" if product_id is not None else "admin_cancel_action"
         builder.row(InlineKeyboardButton(text=cancel_text, callback_data=cancel_callback))
+
+        return builder.as_markup()
+
+    def get_welcome_editor_kb(self, has_photo: bool = False) -> Optional[InlineKeyboardMarkup]:
+        """Клавиатура управления приветственным сообщением и фото (без кнопки сохранения)"""
+        if self.template is None:
+            return None
+
+        cfg = self.template.get("admin_welcome_editor", {}).get("buttons", {})
+
+        # Берем локализации из JSON с надежными фолбеками (без save)
+        edit_text_label = cfg.get("admin_edit_wel_text", {}).get(self.lang) or "✏️ Изменить текст"
+        edit_photo_label = cfg.get("admin_edit_wel_photo", {}).get(self.lang) or "📸 Изменить фото"
+        del_photo_label = cfg.get("admin_edit_wel_del_photo", {}).get(self.lang) or "❌ Удалить фото"
+        back_label = cfg.get("admin_shop_settings", {}).get(self.lang) or "⬅️ Назад"
+
+        builder = InlineKeyboardBuilder()
+
+        builder.row(InlineKeyboardButton(text=edit_text_label, callback_data="admin_edit_wel_text"))
+        builder.row(InlineKeyboardButton(text=edit_photo_label, callback_data="admin_edit_wel_photo"))
+
+        if has_photo:
+            builder.row(InlineKeyboardButton(text=del_photo_label, callback_data="admin_edit_wel_del_photo"))
+
+        builder.row(InlineKeyboardButton(text=back_label, callback_data="admin_shop_settings"))
 
         return builder.as_markup()

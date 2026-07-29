@@ -86,6 +86,8 @@ async def back_to_main_menu(
     & ~F.data.startswith("admin_set")
     & ~F.data.startswith("admin_save")
     & ~F.data.startswith("admin_mainmenu")
+    & ~F.data.startswith("admin_greeting")   # <-- Исключаем кнопку открытия приветствия
+    & ~F.data.startswith("admin_edit_wel")   # <-- Исключаем кнопки редактирования приветствия
 )
 async def catch_other_admin_actions(callback: CallbackQuery, user: User):
     """Безопасная заглушка для нереализованных разделов админки (без ложных срабатываний)."""

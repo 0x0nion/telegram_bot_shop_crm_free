@@ -13,3 +13,8 @@ class EditProduct(StatesGroup):
     price = State()
     unit = State()
     photo = State()
+
+
+class EditWelcome(StatesGroup):
+    text = State()
+    photo = State()

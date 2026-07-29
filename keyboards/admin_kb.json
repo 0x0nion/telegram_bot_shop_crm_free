@@ -54,6 +54,31 @@
     },
     "sizes": [1, 1, 1]
   },
+  "admin_welcome_editor": {
+    "buttons": {
+      "admin_edit_wel_text": {
+        "en": "✏️ Edit Text",
+        "es": "✏️ Editar Texto",
+        "ru": "✏️ Изменить текст"
+      },
+      "admin_edit_wel_photo": {
+        "en": "📸 Edit Photo",
+        "es": "📸 Editar Foto",
+        "ru": "📸 Изменить фото"
+      },
+      "admin_edit_wel_del_photo": {
+        "en": "🗑 Delete Photo",
+        "es": "🗑 Eliminar Foto",
+        "ru": "🗑 Удалить фото"
+      },
+      "admin_shop_settings": {
+        "en": "⬅️ Back",
+        "es": "⬅️ Volver",
+        "ru": "⬅️ Назад"
+      }
+    },
+    "sizes": [1, 1, 1, 1]
+  },
   "admin_category_actions": {
     "buttons": {
       "cancel": {
@@ -232,6 +257,16 @@
         "en": "📸 Send a new photo of the product:",
         "es": "📸 Envía una nueva foto del producto:",
         "ru": "📸 Пришлите новую фотографию товара:"
+      },
+      "welcome_text": {
+        "en": "✍️ Enter new text for the greeting message:",
+        "es": "✍️ Introduce el nuevo texto para el saludo:",
+        "ru": "✍️ Введите новый текст приветственного сообщения:"
+      },
+      "welcome_photo": {
+        "en": "📸 Send a new image for the greeting:",
+        "es": "📸 Envía una nueva imagen para el saludo:",
+        "ru": "📸 Пришлите новое изображение для приветствия:"
       },
       "default": {
         "en": "Enter data:",
