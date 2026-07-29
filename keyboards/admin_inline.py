@@ -55,6 +55,37 @@ class AdminInlineKb:
         builder.adjust(*sizes)
         return builder.as_markup()
 
+    def get_shop_settings_kb(self) -> Optional[InlineKeyboardMarkup]:
+        """Клавиатура для подменю 'Настройка магазина' с корректным callback для возврата"""
+        if self.template is None:
+            logger.critical("[ADMIN KB] Keyboards template is missing!")
+            return None
+
+        data = self.template.get("admin_shop_settings_menu")
+        if data is None:
+            logger.critical("[ADMIN KB] Keyboard with key 'admin_shop_settings_menu' not found!")
+            return None
+
+        buttons = data.get("buttons")
+        sizes = data.get("sizes")
+
+        if not buttons or not sizes:
+            logger.critical("[ADMIN KB] Invalid structure for 'admin_shop_settings_menu'!")
+            return None
+
+        builder = InlineKeyboardBuilder()
+
+        for callback_data, translations in buttons.items():
+            button_text = translations.get(self.lang) or translations.get("en") or "XXX"
+
+            # Подменяем callback для кнопки "back" на тот, который ожидает роутер главного меню
+            actual_callback = "admin_mainmenu" if callback_data == "back" else callback_data
+
+            builder.button(text=button_text, callback_data=actual_callback)
+
+        builder.adjust(*sizes)
+        return builder.as_markup()
+
     def get_text(self, path: str, default: str = "") -> str:
         """Вспомогательный метод для получения локализованных строк/сообщений"""
         if self.template is None:
@@ -122,12 +153,12 @@ class AdminInlineKb:
 
         builder = InlineKeyboardBuilder()
 
-        # 1. Навигация "Назад" / "В главное меню"
+        # 1. Навигация "Назад" / "В главное меню" (теперь кнопка назад ведет в подменю настройки магазина)
         if current_cat_id:
             parent_to_go = parent_id if parent_id else "root"
             builder.row(InlineKeyboardButton(text=back_text, callback_data=f"admin_shop_{parent_to_go}"))
         else:
-            builder.row(InlineKeyboardButton(text=to_main_text, callback_data="admin_mainmenu"))
+            builder.row(InlineKeyboardButton(text=to_main_text, callback_data="admin_shop_settings"))
 
         # 2. Список подкатегорий (Имя категории из словаря локалей/модели + кнопка «Удалить»)
         for category in categories:

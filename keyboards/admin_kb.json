@@ -1,15 +1,10 @@
 {
   "admin_main_menu": {
     "buttons": {
-      "admin_shop": {
-        "en": "🛍️ Edit Catalog",
-        "es": "🛍️ Editar Catálogo",
-        "ru": "🛍️ Редактировать Каталог"
-      },
-      "admin_greeting": {
-        "en": "💬 Greeting",
-        "es": "💬 Saludo",
-        "ru": "💬 Приветствие"
+      "admin_shop_settings": {
+        "en": "⚙️ Shop Settings",
+        "es": "⚙️ Configuración de Tienda",
+        "ru": "⚙️ Настройка магазина"
       },
       "admin_warehouse": {
         "en": "📦 Warehouse",
@@ -37,7 +32,27 @@
         "ru": "📈 Статистика"
       }
     },
-    "sizes": [1, 1, 1, 1, 1, 1, 1]
+    "sizes": [1, 1, 1, 1, 1, 1]
+  },
+  "admin_shop_settings_menu": {
+    "buttons": {
+      "admin_shop_root": {
+        "en": "📁 Edit Catalog",
+        "es": "📁 Editar Catálogo",
+        "ru": "📁 Редактировать каталог"
+      },
+      "admin_greeting": {
+        "en": "💬 Greeting (/start)",
+        "es": "💬 Saludo (/start)",
+        "ru": "💬 Приветствие (/start)"
+      },
+      "back": {
+        "en": "⬅️ Back",
+        "es": "⬅️ Volver",
+        "ru": "⬅️ Назад"
+      }
+    },
+    "sizes": [1, 1, 1]
   },
   "admin_category_actions": {
     "buttons": {

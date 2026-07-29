@@ -28,10 +28,10 @@ def _parse_category_id(raw_value: str) -> int | None:
     return int(raw_value) if raw_value and raw_value != "root" else None
 
 
+@categories_router.callback_query(F.data == "admin_shop")
 @categories_router.callback_query(
-    F.data == "admin_shop"
+    F.data.startswith("admin_shop_") & ~F.data.startswith("admin_shop_settings")
 )
-@categories_router.callback_query(F.data.startswith("admin_shop_"))
 async def route_shop_level(
     callback: CallbackQuery,
     admin_repo: AdminRepository,

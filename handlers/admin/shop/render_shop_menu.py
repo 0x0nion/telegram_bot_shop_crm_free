@@ -70,7 +70,7 @@ async def render_shop_menu(
             )
     else:
         shop_caption = kb.get_text("root_menu_title", "🏪 (Main Menu)\n")
-        category_text = (
+        raw_category_text = (
             await admin_repo.get_locale_text(
                 entity_id=0,
                 entity_type="category_description",
@@ -81,13 +81,18 @@ async def render_shop_menu(
             or ""
         )
 
-        if not category_text.strip():
+        # Проверяем реальное наличие пользовательского описания ДО подстановки дефолта
+        if raw_category_text.strip():
+            has_description = True
+            category_text = raw_category_text
+        else:
             category_text = kb.get_text(
                 "root_menu_description",
                 "Welcome to the admin catalog management.",
             )
 
-    if category_text.strip():
+    # Для подкатегорий проверяем description отдельно, если еще не проверили
+    if current_cat_id and category_text.strip():
         has_description = True
 
     db_categories = await admin_repo.get_categories_by_parent(
