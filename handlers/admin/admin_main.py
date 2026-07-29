@@ -10,6 +10,7 @@ from handlers.admin.show_admin_panel import show_admin_panel
 from handlers.admin.shop.render_shop_menu import render_shop_menu
 from handlers.admin.utils import get_user_lang
 from keyboards.admin_inline import AdminInlineKb
+from src.core.ui import UIManager
 
 admin_main_router = Router()
 logger = logging.getLogger(__name__)
@@ -34,13 +35,11 @@ async def cb_shop_settings(callback: CallbackQuery, user: User):
     title_text = kb.get_text("welcome_title", "🔑 Панель администратора открыта:")
     text = f"{title_text}\n\n⚙️ <b>Настройка магазина:</b>"
 
-    if callback.message.photo:
-        await callback.message.delete()
-        await callback.message.answer(text, reply_markup=markup, parse_mode="HTML")
-    else:
-        await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
-
-    await callback.answer()
+    await UIManager.show(
+        event=callback,
+        text=text,
+        reply_markup=markup,
+    )
 
 
 @admin_main_router.callback_query(F.data == "admin_shop_start")

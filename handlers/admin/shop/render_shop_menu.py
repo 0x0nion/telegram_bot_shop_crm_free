@@ -1,5 +1,4 @@
 # handlers/admin/shop/render_shop_menu.py
-from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery, Message
 
 from database.models.user import User
@@ -7,6 +6,7 @@ from database.repositories.admin_repo import AdminRepository
 from handlers.admin.utils import get_user_lang
 from keyboards.admin_inline import AdminInlineKb
 from locales.currencies import get_currency_symbol
+from src.core.ui import UIManager
 
 
 async def render_shop_menu(
@@ -16,7 +16,7 @@ async def render_shop_menu(
     user: User,
     message_id_to_edit: int | None = None,
 ) -> None:
-    """Универсальная и безопасная функция отрисовки интерфейса магазина."""
+    """Универсальная и безопасная функция отрисовки интерфейса магазина через UIManager."""
     admin_id = event.from_user.id
     lang = get_user_lang(user)
     kb = AdminInlineKb(lang=lang)
@@ -136,45 +136,9 @@ async def render_shop_menu(
         has_description=has_description,
     )
 
-    chat_id = (
-        event.message.chat.id
-        if isinstance(event, CallbackQuery)
-        else event.chat.id
+    await UIManager.show(
+        event=event,
+        text=text,
+        reply_markup=reply_markup,
+        message_id_to_edit=message_id_to_edit,
     )
-    msg_id = message_id_to_edit or (
-        event.message.message_id if isinstance(event, CallbackQuery) else None
-    )
-
-    try:
-        if msg_id:
-            await event.bot.edit_message_text(
-                chat_id=chat_id,
-                message_id=msg_id,
-                text=text,
-                reply_markup=reply_markup,
-            )
-        else:
-            await event.bot.send_message(
-                chat_id=chat_id, text=text, reply_markup=reply_markup
-            )
-    except TelegramBadRequest as e:
-        if "message is not modified" in str(e):
-            pass
-        elif msg_id:
-            try:
-                await event.bot.delete_message(
-                    chat_id=chat_id, message_id=msg_id
-                )
-            except Exception:
-                pass
-            await event.bot.send_message(
-                chat_id=chat_id, text=text, reply_markup=reply_markup
-            )
-        else:
-            raise e
-
-    if isinstance(event, CallbackQuery):
-        try:
-            await event.answer()
-        except TelegramBadRequest:
-            pass

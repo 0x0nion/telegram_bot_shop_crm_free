@@ -1,31 +1,33 @@
 # handlers/admin/shop/product_editor.py
 import asyncio
 import logging
-from aiogram import F, Router, Bot
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
-from aiogram.exceptions import TelegramBadRequest
 
+from database.models.user import User
 from database.repositories.admin_repo import AdminRepository
 from handlers.admin.utils import get_user_lang, self_destruct
 from keyboards.admin_inline import AdminInlineKb
 from locales.currencies import get_currency_symbol
-from state.admin_states import EditProduct
-from database.models.user import User
 from locales.units import get_unit_label
+from src.core.ui import UIManager
+from state.admin_states import EditProduct
 
 editor_router = Router()
 logger = logging.getLogger(__name__)
 
 
 async def show_product_card(
-    chat_id: int,
-    product_id: int,
-    admin_repo: AdminRepository,
-    bot: Bot,
-    old_message_id: int = None,
-    lang: str = "en",
+        event: Message | CallbackQuery,
+        product_id: int,
+        admin_repo: AdminRepository,
+        lang: str = "en",
+        message_id_to_edit: int | None = None,
 ):
+    """Единый метод отображения карточки товара с использованием UIManager."""
+    chat_id = event.message.chat.id if isinstance(event, CallbackQuery) else event.chat.id
+
     product = await admin_repo.get_product_by_id(
         product_id, use_temp=True, admin_id=chat_id
     )
@@ -57,51 +59,34 @@ async def show_product_card(
         product_id=product_id, category_id=category_id
     )
 
-    if old_message_id:
-        try:
-            await bot.delete_message(chat_id, old_message_id)
-        except TelegramBadRequest:
-            pass
-
-    if product.image_id:
-        await bot.send_photo(
-            chat_id,
-            photo=product.image_id,
-            caption=formatted_text,
-            reply_markup=reply_markup,
-            parse_mode="HTML",
-        )
-    else:
-        await bot.send_message(
-            chat_id,
-            text=formatted_text,
-            reply_markup=reply_markup,
-            parse_mode="HTML",
-        )
+    await UIManager.show(
+        event=event,
+        text=formatted_text,
+        reply_markup=reply_markup,
+        photo=product.image_id,
+        message_id_to_edit=message_id_to_edit,
+    )
 
 
 @editor_router.callback_query(F.data.startswith("admin_item_"))
 async def route_product_card(
-    callback: CallbackQuery, admin_repo: AdminRepository, user: User
+        callback: CallbackQuery, admin_repo: AdminRepository, user: User
 ):
     data_parts = callback.data.split("_")
     product_id = int(data_parts[2]) if len(data_parts) > 2 else 0
     lang = get_user_lang(user)
 
     await show_product_card(
-        callback.message.chat.id,
-        product_id,
-        admin_repo,
-        callback.bot,
-        callback.message.message_id,
+        event=callback,
+        product_id=product_id,
+        admin_repo=admin_repo,
         lang=lang,
     )
-    await callback.answer()
 
 
 @editor_router.callback_query(F.data.startswith("admin_edit_p_"))
 async def start_edit_product(
-    callback: CallbackQuery, state: FSMContext, user: User
+        callback: CallbackQuery, state: FSMContext, user: User
 ):
     data_parts = callback.data.split("_")
     action = data_parts[3] if len(data_parts) > 3 else ""
@@ -117,18 +102,11 @@ async def start_edit_product(
         )
         reply_markup = kb.get_unit_selection_kb(product_id=product_id)
 
-        if callback.message.photo:
-            try:
-                await callback.message.delete()
-            except TelegramBadRequest:
-                pass
-            await callback.message.answer(prompt_text, reply_markup=reply_markup)
-        else:
-            await callback.message.edit_text(
-                prompt_text, reply_markup=reply_markup
-            )
-
-        await callback.answer()
+        await UIManager.show(
+            event=callback,
+            text=prompt_text,
+            reply_markup=reply_markup,
+        )
         return
 
     state_mapping = {
@@ -152,27 +130,21 @@ async def start_edit_product(
         "prompts.default", "Введите данные:"
     )
 
-    if callback.message.photo:
-        try:
-            await callback.message.delete()
-        except TelegramBadRequest:
-            pass
-        new_msg = await callback.message.answer(prompt_text, reply_markup=None)
-        await state.update_data(
-            product_id=product_id, message_id=new_msg.message_id
-        )
-    else:
-        await state.update_data(
-            product_id=product_id, message_id=callback.message.message_id
-        )
-        await callback.message.edit_text(prompt_text, reply_markup=None)
+    # Запоминаем ID текущего сообщения, чтобы в дальнейшем заменить его обратно на карточку
+    await state.update_data(
+        product_id=product_id, menu_message_id=callback.message.message_id
+    )
 
-    await callback.answer()
+    await UIManager.show(
+        event=callback,
+        text=prompt_text,
+        reply_markup=None,
+    )
 
 
 @editor_router.callback_query(F.data.startswith("admin_set_unit_"))
 async def set_product_unit(
-    callback: CallbackQuery, admin_repo: AdminRepository, user: User
+        callback: CallbackQuery, admin_repo: AdminRepository, user: User
 ):
     """Обработчик выбора конкретной единицы измерения из инлайн-кнопок."""
     parts = callback.data.split("_")
@@ -189,14 +161,11 @@ async def set_product_unit(
     )
 
     await show_product_card(
-        callback.message.chat.id,
-        product_id,
-        admin_repo,
-        callback.bot,
-        callback.message.message_id,
+        event=callback,
+        product_id=product_id,
+        admin_repo=admin_repo,
         lang=lang,
     )
-    await callback.answer()
 
 
 @editor_router.message(EditProduct.name, F.text)
@@ -204,14 +173,14 @@ async def set_product_unit(
 @editor_router.message(EditProduct.price, F.text)
 @editor_router.message(EditProduct.photo)
 async def process_edit_input(
-    message: Message,
-    state: FSMContext,
-    admin_repo: AdminRepository,
-    user: User,
+        message: Message,
+        state: FSMContext,
+        admin_repo: AdminRepository,
+        user: User,
 ):
     data = await state.get_data()
     pid = data.get("product_id")
-    old_msg_id = data.get("message_id")
+    menu_message_id = data.get("menu_message_id")
     curr_state = await state.get_state()
 
     lang = get_user_lang(user)
@@ -266,6 +235,13 @@ async def process_edit_input(
         )
 
     await state.clear()
-    await show_product_card(
-        message.chat.id, pid, admin_repo, message.bot, old_msg_id, lang=lang
-    )
+
+    # Возвращаем пользователя обратно в карточку товара в то же исходное сообщение
+    if menu_message_id:
+        await show_product_card(
+            event=message,
+            product_id=pid,
+            admin_repo=admin_repo,
+            lang=lang,
+            message_id_to_edit=menu_message_id,
+        )

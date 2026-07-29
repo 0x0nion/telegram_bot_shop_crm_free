@@ -1,11 +1,11 @@
 # handlers/admin/show_admin_panel.py
-from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery, Message
 
 from database.models.user import User
 from database.repositories.admin_repo import AdminRepository
 from handlers.admin.utils import get_user_lang
 from keyboards.admin_inline import AdminInlineKb
+from src.core.ui import UIManager
 
 
 async def show_admin_panel(
@@ -31,16 +31,8 @@ async def show_admin_panel(
 
     reply_markup = kb.get_kb("admin_main_menu")
 
-    try:
-        if isinstance(event, CallbackQuery):
-            await event.message.edit_text(text, reply_markup=reply_markup)
-            await event.answer()
-        else:
-            await event.answer(text, reply_markup=reply_markup)
-    except TelegramBadRequest as e:
-        if "message is not modified" in str(e) and isinstance(
-            event, CallbackQuery
-        ):
-            await event.answer()
-        else:
-            raise e
+    await UIManager.show(
+        event=event,
+        text=text,
+        reply_markup=reply_markup,
+    )

@@ -9,6 +9,7 @@ from database.repositories.admin_repo import AdminRepository
 from handlers.admin.shop.render_shop_menu import render_shop_menu
 from handlers.admin.utils import get_user_lang, parse_id
 from keyboards.admin_inline import AdminInlineKb
+from src.core.ui import UIManager
 from state.admin_states import AdminState
 
 categories_router = Router()
@@ -62,8 +63,11 @@ async def route_add_category_start(
     )
     reply_markup = kb.get_cancel_add_category_kb(back_callback=back_callback)
 
-    await callback.message.edit_text(text=text, reply_markup=reply_markup)
-    await callback.answer()
+    await UIManager.show(
+        event=callback,
+        text=text,
+        reply_markup=reply_markup,
+    )
 
 
 @categories_router.message(AdminState.add_category, F.text)
@@ -140,17 +144,11 @@ async def start_edit_category_description(
     prompt_text = kb.get_text("prompts.category_desc", "✍️ Введите описание:")
     back_callback = f"admin_shop_{raw_id}"
 
-    try:
-        await callback.message.edit_text(
-            prompt_text,
-            reply_markup=kb.get_cancel_add_category_kb(
-                back_callback=back_callback
-            ),
-        )
-    except TelegramBadRequest:
-        pass
-
-    await callback.answer()
+    await UIManager.show(
+        event=callback,
+        text=prompt_text,
+        reply_markup=kb.get_cancel_add_category_kb(back_callback=back_callback),
+    )
 
 
 @categories_router.message(
