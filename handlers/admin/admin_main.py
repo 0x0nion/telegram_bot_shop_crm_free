@@ -1,3 +1,4 @@
+# handlers/admin/admin_main.py
 import logging
 from aiogram import F, Router
 from aiogram.filters import Command
@@ -6,6 +7,7 @@ from aiogram.types import CallbackQuery, Message
 from database.models.user import User
 from database.repositories.admin_repo import AdminRepository
 from handlers.admin.show_admin_panel import show_admin_panel
+from handlers.admin.shop.render_shop_menu import render_shop_menu
 from keyboards.admin_inline import AdminInlineKb
 
 admin_main_router = Router()
@@ -28,7 +30,7 @@ async def cmd_admin_entry(
         event: Message | CallbackQuery, admin_repo: AdminRepository, user: User
 ):
     """Единая точка входа в админ-панель (DRY)."""
-    await show_admin_panel(event, admin_repo, user=user, sync=True)
+    await show_admin_panel(event, admin_repo, user=user, sync=False)
 
 
 @admin_main_router.callback_query(F.data == "admin_shop_settings")
@@ -47,6 +49,16 @@ async def cb_shop_settings(callback: CallbackQuery, user: User):
     else:
         await callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
 
+    await callback.answer()
+
+
+@admin_main_router.callback_query(F.data == "admin_shop_start")
+async def cb_open_shop_root(
+        callback: CallbackQuery, admin_repo: AdminRepository, user: User
+):
+    """Единственная точка старта сессии: синхронизация + открытие корня каталога."""
+    await admin_repo.sync_to_temp(admin_id=callback.from_user.id)
+    await render_shop_menu(callback, admin_repo, current_cat_id=None, user=user)
     await callback.answer()
 
 
@@ -71,7 +83,6 @@ async def back_to_main_menu(
 async def catch_other_admin_actions(callback: CallbackQuery, user: User):
     """Заглушка для нереализованных разделов админки."""
     parts = callback.data.split("_")
-    # Для ключей вроде admin_warehouse берем parts[1], для двойных — можно адаптировать
     action = parts[1] if len(parts) > 1 else "default"
 
     lang = _get_user_lang(user)

@@ -36,7 +36,7 @@
   },
   "admin_shop_settings_menu": {
     "buttons": {
-      "admin_shop_root": {
+      "admin_shop_start": {
         "en": "📁 Edit Catalog",
         "es": "📁 Editar Catálogo",
         "ru": "📁 Редактировать каталог"

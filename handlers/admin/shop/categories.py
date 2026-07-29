@@ -30,7 +30,9 @@ def _parse_category_id(raw_value: str) -> int | None:
 
 @categories_router.callback_query(F.data == "admin_shop")
 @categories_router.callback_query(
-    F.data.startswith("admin_shop_") & ~F.data.startswith("admin_shop_settings")
+    F.data.startswith("admin_shop_")
+    & ~F.data.startswith("admin_shop_settings")
+    & ~F.data.startswith("admin_shop_start")
 )
 async def route_shop_level(
     callback: CallbackQuery,
@@ -40,13 +42,12 @@ async def route_shop_level(
 ):
     await state.clear()
 
-    admin_id = callback.from_user.id
     data_parts = callback.data.split("_")
     raw_id = data_parts[2] if len(data_parts) > 2 else "root"
     current_cat_id = _parse_category_id(raw_id)
 
-    if current_cat_id is None:
-        await admin_repo.sync_to_temp(admin_id=admin_id)
+    # Синхронизация здесь намеренно отсутствует:
+    # сессия инициализируется строго один раз при входе через "Редактировать каталог".
 
     await render_shop_menu(callback, admin_repo, current_cat_id, user=user)
     await callback.answer()
