@@ -1,10 +1,10 @@
 {
   "admin_main_menu": {
     "buttons": {
-      "admin_shop": {
-        "en": "⚙️ Edit Shop",
-        "es": "⚙️ Editar Tienda",
-        "ru": "⚙️ Редактировать Магазин"
+      "admin_shop_settings": {
+        "en": "⚙️ Shop Settings",
+        "es": "⚙️ Configuración de Tienda",
+        "ru": "⚙️ Настройка магазина"
       },
       "admin_warehouse": {
         "en": "📦 Warehouse",
@@ -17,22 +17,67 @@
         "ru": "👥 Юзеры"
       },
       "admin_workers": {
-        "en": "⚒ Workers",
-        "es": "⚒ Trabajadores",
-        "ru": "Работники"
+        "en": "🛠️ Workers",
+        "es": "🛠️ Trabajadores",
+        "ru": "🛠️ Работники"
       },
       "admin_alert": {
         "en": "📢 Broadcast",
         "es": "📢 Difusión",
-        "ru": "Рассылка"
+        "ru": "📢 Рассылка"
       },
       "admin_stat": {
         "en": "📈 Statistics",
         "es": "📈 Estadísticas",
-        "ru": "Статистика"
+        "ru": "📈 Статистика"
       }
     },
     "sizes": [1, 1, 1, 1, 1, 1]
+  },
+  "admin_shop_settings_menu": {
+    "buttons": {
+      "admin_shop_start": {
+        "en": "📁 Edit Catalog",
+        "es": "📁 Editar Catálogo",
+        "ru": "📁 Редактировать каталог"
+      },
+      "admin_greeting": {
+        "en": "💬 Greeting (/start)",
+        "es": "💬 Saludo (/start)",
+        "ru": "💬 Приветствие (/start)"
+      },
+      "back": {
+        "en": "⬅️ Back",
+        "es": "⬅️ Volver",
+        "ru": "⬅️ Назад"
+      }
+    },
+    "sizes": [1, 1, 1]
+  },
+  "admin_welcome_editor": {
+    "buttons": {
+      "admin_edit_wel_text": {
+        "en": "✏️ Edit Text",
+        "es": "✏️ Editar Texto",
+        "ru": "✏️ Изменить текст"
+      },
+      "admin_edit_wel_photo": {
+        "en": "📸 Edit Photo",
+        "es": "📸 Editar Foto",
+        "ru": "📸 Изменить фото"
+      },
+      "admin_edit_wel_del_photo": {
+        "en": "🗑 Delete Photo",
+        "es": "🗑 Eliminar Foto",
+        "ru": "🗑 Удалить фото"
+      },
+      "admin_shop_settings": {
+        "en": "⬅️ Back",
+        "es": "⬅️ Volver",
+        "ru": "⬅️ Назад"
+      }
+    },
+    "sizes": [1, 1, 1, 1]
   },
   "admin_category_actions": {
     "buttons": {
@@ -69,6 +114,21 @@
         "en": "🔴 Add Product Here",
         "es": "🔴 Añadir Producto Aquí",
         "ru": "🔴 Добавить товар сюда"
+      },
+      "add_tittle": {
+        "en": "📝 Category details",
+        "es": "📝 Detalles de la categoría",
+        "ru": "📝 Описание категории"
+      },
+      "delete_tittle": {
+        "en": "🗑 Delete",
+        "es": "🗑 Eliminar",
+        "ru": "🗑 Удалить"
+      },
+      "translate_btn": {
+        "en": "🌐 Translate",
+        "es": "🌐 Traducir",
+        "ru": "🌐 Перевести"
       },
       "save_changes": {
         "en": "💾 Save Changes",
@@ -148,9 +208,9 @@
       "ru": "\nЗдесь пока нет товаров."
     },
     "product_card_template": {
-      "en": "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Price:</b> {price} {unit}",
-      "es": "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Precio:</b> {price} {unit}",
-      "ru": "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Цена:</b> {price} {unit}"
+      "en": "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Price:</b> {price} {currency} / {unit}",
+      "es": "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Precio:</b> {price} {currency} / {unit}",
+      "ru": "📦 <b>{name}</b>\n\n📝 <i>{description}</i>\n\n💰 <b>Цена:</b> {price} {currency} / {unit}"
     },
     "no_description": {
       "en": "Description missing",
@@ -197,6 +257,16 @@
         "en": "📸 Send a new photo of the product:",
         "es": "📸 Envía una nueva foto del producto:",
         "ru": "📸 Пришлите новую фотографию товара:"
+      },
+      "welcome_text": {
+        "en": "✍️ Enter new text for the greeting message:",
+        "es": "✍️ Introduce el nuevo texto para el saludo:",
+        "ru": "✍️ Введите новый текст приветственного сообщения:"
+      },
+      "welcome_photo": {
+        "en": "📸 Send a new image for the greeting:",
+        "es": "📸 Envía una nueva imagen para el saludo:",
+        "ru": "📸 Пришлите новое изображение для приветствия:"
       },
       "default": {
         "en": "Enter data:",

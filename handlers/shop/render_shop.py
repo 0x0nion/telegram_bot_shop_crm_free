@@ -3,7 +3,6 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.exceptions import TelegramBadRequest
 from database.repositories.shop_repo import ShopRepository
 
-
 from database.repositories.user_repo import UserRepository
 from keyboards.inline import InlineKb
 from locales.locales import Locale

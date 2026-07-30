@@ -1,9 +1,11 @@
+# keyboards/admin_inline.py
 import json
 import logging
 from pathlib import Path
 from typing import Optional
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from locales.units import ProductUnit, UNIT_LABELS
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +56,37 @@ class AdminInlineKb:
         builder.adjust(*sizes)
         return builder.as_markup()
 
+    def get_shop_settings_kb(self) -> Optional[InlineKeyboardMarkup]:
+        """Клавиатура для подменю 'Настройка магазина' с корректным callback для возврата"""
+        if self.template is None:
+            logger.critical("[ADMIN KB] Keyboards template is missing!")
+            return None
+
+        data = self.template.get("admin_shop_settings_menu")
+        if data is None:
+            logger.critical("[ADMIN KB] Keyboard with key 'admin_shop_settings_menu' not found!")
+            return None
+
+        buttons = data.get("buttons")
+        sizes = data.get("sizes")
+
+        if not buttons or not sizes:
+            logger.critical("[ADMIN KB] Invalid structure for 'admin_shop_settings_menu'!")
+            return None
+
+        builder = InlineKeyboardBuilder()
+
+        for callback_data, translations in buttons.items():
+            button_text = translations.get(self.lang) or translations.get("en") or "XXX"
+
+            # Подменяем callback для кнопки "back" на тот, который ожидает роутер главного меню
+            actual_callback = "admin_mainmenu" if callback_data == "back" else callback_data
+
+            builder.button(text=button_text, callback_data=actual_callback)
+
+        builder.adjust(*sizes)
+        return builder.as_markup()
+
     def get_text(self, path: str, default: str = "") -> str:
         """Вспомогательный метод для получения локализованных строк/сообщений"""
         if self.template is None:
@@ -94,7 +127,9 @@ class AdminInlineKb:
             categories: list,
             products: list,
             current_cat_id: int | None,
-            parent_id: int | None
+            parent_id: int | None,
+            category_names: dict[int, str] | None = None,
+            has_description: bool = False  # Флаг: есть ли описание у текущей категории/главного меню
     ) -> Optional[InlineKeyboardMarkup]:
         """Динамический конструктор управления категориями и товарами магазина"""
         if self.template is None:
@@ -113,21 +148,27 @@ class AdminInlineKb:
         del_text = nav_buttons.get("delete", {}).get(self.lang) or "❌ Delete"
         add_sub_text = nav_buttons.get("add_subcategory", {}).get(self.lang) or "🟢 Add Subcategory"
         add_prod_text = nav_buttons.get("add_product", {}).get(self.lang) or "🔴 Add Product Here"
+        add_tittle_text = nav_buttons.get("add_tittle", {}).get(self.lang) or "📝 Category details"
+        del_tittle_text = nav_buttons.get("delete_tittle", {}).get(self.lang) or "🗑 Delete description"
         save_text = nav_buttons.get("save_changes", {}).get(self.lang) or "💾 Save Changes"
 
         builder = InlineKeyboardBuilder()
 
-        # 1. Навигация "Назад" / "В главное меню"
+        # 1. Навигация "Назад" / "В главное меню" (теперь кнопка назад ведет в подменю настройки магазина)
         if current_cat_id:
             parent_to_go = parent_id if parent_id else "root"
             builder.row(InlineKeyboardButton(text=back_text, callback_data=f"admin_shop_{parent_to_go}"))
         else:
-            builder.row(InlineKeyboardButton(text=to_main_text, callback_data="admin_mainmenu"))
+            builder.row(InlineKeyboardButton(text=to_main_text, callback_data="admin_shop_settings"))
 
-        # 2. Список подкатегорий (Имя категории + кнопка «Удалить»)
+        # 2. Список подкатегорий (Имя категории из словаря локалей/модели + кнопка «Удалить»)
         for category in categories:
+            cat_display_name = (
+                category_names.get(category.id) if category_names and category.id in category_names
+                else category.name
+            )
             builder.row(
-                InlineKeyboardButton(text=f"📁 {category.name}", callback_data=f"admin_shop_{category.id}"),
+                InlineKeyboardButton(text=f"📁 {cat_display_name}", callback_data=f"admin_shop_{category.id}"),
                 InlineKeyboardButton(text=del_text, callback_data=f"admin_del_cat_{category.id}")
             )
 
@@ -142,6 +183,17 @@ class AdminInlineKb:
         cat_suffix = f"_{current_cat_id}" if current_cat_id else "_root"
         builder.row(InlineKeyboardButton(text=add_sub_text, callback_data=f"admin_addcat{cat_suffix}"))
         builder.row(InlineKeyboardButton(text=add_prod_text, callback_data=f"admin_add_item{cat_suffix}"))
+
+        # Кнопки описания: если описание есть, выводим «Описание» и «Удалить описание» на одной строке.
+        # Если описания нет — только кнопку добавления.
+        if has_description:
+            builder.row(
+                InlineKeyboardButton(text=add_tittle_text, callback_data=f"admin_add_tittle{cat_suffix}"),
+                InlineKeyboardButton(text=del_tittle_text, callback_data=f"admin_del_tittle{cat_suffix}")
+            )
+        else:
+            builder.row(InlineKeyboardButton(text=add_tittle_text, callback_data=f"admin_add_tittle{cat_suffix}"))
+
         builder.row(InlineKeyboardButton(text=save_text, callback_data="admin_save_shop"))
 
         return builder.as_markup()
@@ -177,5 +229,59 @@ class AdminInlineKb:
         )
         builder.row(InlineKeyboardButton(text=edit_photo, callback_data=f"admin_edit_p_photo_{product_id}"))
         builder.row(InlineKeyboardButton(text=back_text, callback_data=f"admin_shop_{category_id}"))
+
+        return builder.as_markup()
+
+    def get_unit_selection_kb(self, product_id: int | None = None) -> Optional[InlineKeyboardMarkup]:
+        """Клавиатура выбора единицы измерения на основе ProductUnit."""
+        builder = InlineKeyboardBuilder()
+
+        # 1. Генерируем кнопки единиц измерения (итерируемся по items для точной типизации)
+        for unit_enum, labels in UNIT_LABELS.items():
+            label_text = labels.get(self.lang) or labels.get("en") or labels.get("ru") or unit_enum.value
+
+            if product_id is not None:
+                callback_data = f"admin_set_unit_{product_id}_{unit_enum.value}"
+            else:
+                callback_data = f"admin_select_unit_{unit_enum.value}"
+
+            builder.button(text=f"📦 {label_text}", callback_data=callback_data)
+
+        builder.adjust(3)
+
+        # 2. Достаем перевод "Отмена" из json (admin_category_actions.buttons.cancel)
+        cancel_text = "❌ Cancel"
+        if self.template:
+            cfg = self.template.get("admin_category_actions", {})
+            cancel_btn = cfg.get("buttons", {}).get("cancel", {})
+            cancel_text = cancel_btn.get(self.lang) or cancel_btn.get("en") or cancel_btn.get("ru") or cancel_text
+
+        cancel_callback = f"admin_edit_p_cancel_{product_id}" if product_id is not None else "admin_cancel_action"
+        builder.row(InlineKeyboardButton(text=cancel_text, callback_data=cancel_callback))
+
+        return builder.as_markup()
+
+    def get_welcome_editor_kb(self, has_photo: bool = False) -> Optional[InlineKeyboardMarkup]:
+        """Клавиатура управления приветственным сообщением и фото (без кнопки сохранения)"""
+        if self.template is None:
+            return None
+
+        cfg = self.template.get("admin_welcome_editor", {}).get("buttons", {})
+
+        # Берем локализации из JSON с надежными фолбеками (без save)
+        edit_text_label = cfg.get("admin_edit_wel_text", {}).get(self.lang) or "✏️ Изменить текст"
+        edit_photo_label = cfg.get("admin_edit_wel_photo", {}).get(self.lang) or "📸 Изменить фото"
+        del_photo_label = cfg.get("admin_edit_wel_del_photo", {}).get(self.lang) or "❌ Удалить фото"
+        back_label = cfg.get("admin_shop_settings", {}).get(self.lang) or "⬅️ Назад"
+
+        builder = InlineKeyboardBuilder()
+
+        builder.row(InlineKeyboardButton(text=edit_text_label, callback_data="admin_edit_wel_text"))
+        builder.row(InlineKeyboardButton(text=edit_photo_label, callback_data="admin_edit_wel_photo"))
+
+        if has_photo:
+            builder.row(InlineKeyboardButton(text=del_photo_label, callback_data="admin_edit_wel_del_photo"))
+
+        builder.row(InlineKeyboardButton(text=back_label, callback_data="admin_shop_settings"))
 
         return builder.as_markup()

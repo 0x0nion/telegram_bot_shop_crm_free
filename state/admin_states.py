@@ -4,6 +4,7 @@ from aiogram.fsm.state import StatesGroup, State
 
 class AdminState(StatesGroup):
     add_category = State()
+    edit_category_description = State()
 
 
 class EditProduct(StatesGroup):
@@ -11,4 +12,9 @@ class EditProduct(StatesGroup):
     description = State()
     price = State()
     unit = State()
+    photo = State()
+
+
+class EditWelcome(StatesGroup):
+    text = State()
     photo = State()
