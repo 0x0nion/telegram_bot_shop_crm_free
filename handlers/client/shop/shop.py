@@ -1,12 +1,12 @@
-# handlers/shop/shop.py
+# handlers/shop/client/shop/shop.py
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from database.repositories.shop_repo import ShopRepository
 from database.repositories.user_repo import UserRepository
-from handlers.shop.render_product import show_product_card
-from handlers.shop.render_shop import render_shop_menu
+from handlers.client.shop.render_product import show_product_card
+from handlers.client.shop.render_shop import render_shop_menu
 
 
 user_shop_router = Router()

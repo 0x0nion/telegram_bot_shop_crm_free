@@ -1,15 +1,12 @@
-# handlers/admin/product_editor.py
 import asyncio
-from aiogram import Router, Bot
+from aiogram import Bot
 from aiogram.types import Message, InputMediaPhoto
 from aiogram.exceptions import TelegramBadRequest
 
 from database.repositories.shop_repo import ShopRepository
 from keyboards.inline import InlineKb
 from locales.locales import Locale
-
-
-editor_router = Router()
+from utils.logger import logger
 
 
 def format_product_from_template(product, template: str) -> str:
@@ -45,6 +42,7 @@ async def show_product_card(
         old_message_id: int = None
 ):
     """Универсальная локализованная функция для отрисовки карточки товара."""
+    logger.info(f"Showing product card id={product_id} for chat_id={chat_id}")
     product = await shop_repo.get_product_by_id(product_id)
     if not product:
         return

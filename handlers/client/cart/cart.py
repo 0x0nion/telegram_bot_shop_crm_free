@@ -1,10 +1,11 @@
+# handlers/client/cart/cart.py
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from database.models import User
 from database.repositories.user_repo import UserRepository
-from handlers.cart.render_cart import render_cart
+from handlers.client.cart.render_cart import render_cart
 from keyboards.inline import InlineKb
 from locales.locales import Locale
 from state.user_states import UserState

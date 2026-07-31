@@ -1,4 +1,3 @@
-# handlers/user.py
 from aiogram import F, Router
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
@@ -9,10 +8,10 @@ from database.repositories.user_repo import UserRepository
 from keyboards.inline import get_language_keyboard, InlineKb
 from locales.locales import Locale
 
-user_router = Router()
+client_main_router = Router()
 
 
-@user_router.message(CommandStart())
+@client_main_router.message(CommandStart())
 async def cmd_start(message: Message, user_repo: UserRepository, state: FSMContext, user: User):
     await state.clear()
 
@@ -30,7 +29,7 @@ async def cmd_start(message: Message, user_repo: UserRepository, state: FSMConte
         )
 
 
-@user_router.callback_query(F.data.startswith("client_main"))
+@client_main_router.callback_query(F.data.startswith("client_main"))
 async def open_main_menu(callback: CallbackQuery, user_repo: UserRepository, user: User):
     await callback.answer()
     await callback.message.edit_text(
@@ -39,7 +38,7 @@ async def open_main_menu(callback: CallbackQuery, user_repo: UserRepository, use
     )
 
 
-@user_router.callback_query(F.data.startswith("client_settings"))
+@client_main_router.callback_query(F.data.startswith("client_settings"))
 async def open_settings(callback: CallbackQuery, user_repo: UserRepository, user: User):
     await callback.answer()
     await callback.message.edit_text(
@@ -48,8 +47,7 @@ async def open_settings(callback: CallbackQuery, user_repo: UserRepository, user
     )
 
 
-
-@user_router.callback_query(F.data.startswith("lang_"))
+@client_main_router.callback_query(F.data.startswith("lang_"))
 async def select_language(callback: CallbackQuery, user_repo: UserRepository):
     await callback.answer()
     await user_repo.update_language(user_id=callback.from_user.id, language=callback.data.split('_')[-1])

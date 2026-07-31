@@ -1,4 +1,4 @@
-# handlers/shop/render_shop.py
+# handlers/client/shop/render_shop.py
 from aiogram.types import CallbackQuery, Message
 from aiogram.exceptions import TelegramBadRequest
 from database.repositories.shop_repo import ShopRepository
