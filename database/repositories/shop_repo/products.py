@@ -1,36 +1,28 @@
 from sqlalchemy import select
-from database.repositories.base_repo import BaseRepository
-from database.models.category import Category
+
 from database.models.product import Product
+from utils.logger import logger
 
 
-class ShopRepository(BaseRepository):
-    """Репозиторий для работы исключительно с витриной магазина (клиентская часть)"""
-
-    async def get_category_by_id(self, category_id: int,) -> Category | None:
-        query = select(Category).where(Category.id == category_id)
-        result = await self.session.execute(query)
-        return result.scalar_one_or_none()
-
-    async def get_categories_by_parent(self, parent_id: int | None = None) -> list:
-        query = select(Category).where(Category.parent_id == parent_id)
-        result = await self.session.execute(query)
-        return list(result.scalars().all())
+class ShopProductsMixin:
 
     async def get_products_by_category(self, category_id: int | None) -> list[Product]:
         """Получить активные товары в категории"""
+        logger.info(f"Fetching shop products by category_id={category_id}")
         result = await self.session.execute(
             select(Product).where(Product.category_id == category_id)
         )
         return list(result.scalars().all())
 
     async def get_product_by_id(self, product_id: int) -> Product | None:
+        logger.info(f"Fetching shop product id={product_id}")
         query = select(Product).where(Product.id == product_id)
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
     async def get_next_product(self, category_id: int, current_product_id: int) -> Product | None:
         """Получить следующий товар (с закольцовыванием)"""
+        logger.info(f"Fetching next product for category_id={category_id}, current_product_id={current_product_id}")
         query = select(Product).where(
             Product.category_id == category_id,
             Product.id > current_product_id
@@ -50,6 +42,7 @@ class ShopRepository(BaseRepository):
 
     async def get_prev_product(self, category_id: int, current_product_id: int) -> Product | None:
         """Получить предыдущий товар (с закольцовыванием)"""
+        logger.info(f"Fetching previous product for category_id={category_id}, current_product_id={current_product_id}")
         query = select(Product).where(
             Product.category_id == category_id,
             Product.id < current_product_id
