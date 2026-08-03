@@ -6,53 +6,115 @@ from aiogram.types import CallbackQuery, Message
 from database.models import User
 from database.repositories.user_repo import UserRepository
 from keyboards.inline import get_language_keyboard, InlineKb
-from locales.locales import Locale
+from src.core.ui import UIManager
 
 client_main_router = Router()
 
 
+async def show_client_main_menu(
+    event: Message | CallbackQuery,
+    user_repo: UserRepository,
+    user: User,
+    message_id_to_edit: int | None = None,
+) -> None:
+    """
+    Единая точка отображения главного меню пользователя
+    с подтягиванием текста и фото приветствия из БД через user_repo.
+    """
+    lang = user.language if user and user.language else "ru"
+
+    # Динамическая подгрузка текста и фото приветствия из БД
+    text, photo_id = await user_repo.get_welcome_card(lang_code=lang)
+
+    orders_count = len(user.orders) if user.orders else 0
+    cart_count = len(user.cart) if user.cart else 0
+
+    reply_markup = InlineKb(lang).get_main_kb(orders=orders_count, cart=cart_count)
+
+    await UIManager.show(
+        event=event,
+        text=text,
+        reply_markup=reply_markup,
+        photo=photo_id,
+        message_id_to_edit=message_id_to_edit,
+    )
+
+
 @client_main_router.message(CommandStart())
-async def cmd_start(message: Message, user_repo: UserRepository, state: FSMContext, user: User):
+async def cmd_start(
+    message: Message,
+    user_repo: UserRepository,
+    state: FSMContext,
+    user: User,
+) -> None:
     await state.clear()
 
     if user and user.language:
-        await message.answer(
-            text=Locale(user.language).get_text('user_main'),
-            reply_markup=InlineKb(user.language).get_main_kb(orders=len(user.orders), cart=len(user.cart))
-        )
+        await show_client_main_menu(event=message, user_repo=user_repo, user=user)
     else:
         if not user:
             await user_repo.create_user(user_id=message.from_user.id)
-        await message.answer(
+
+        await UIManager.show(
+            event=message,
             text="👇 👇 👇 👇",
-            reply_markup=get_language_keyboard()
+            reply_markup=get_language_keyboard(),
         )
 
 
 @client_main_router.callback_query(F.data.startswith("client_main"))
-async def open_main_menu(callback: CallbackQuery, user_repo: UserRepository, user: User):
+async def open_main_menu(
+    callback: CallbackQuery,
+    user_repo: UserRepository,
+    user: User,
+) -> None:
     await callback.answer()
-    await callback.message.edit_text(
-        text=Locale(user.language).get_text('user_main'),
-        reply_markup=InlineKb(user.language).get_main_kb(orders=len(user.orders), cart=len(user.cart))
+    await show_client_main_menu(
+        event=callback,
+        user_repo=user_repo,
+        user=user,
+        message_id_to_edit=callback.message.message_id,
     )
 
 
 @client_main_router.callback_query(F.data.startswith("client_settings"))
-async def open_settings(callback: CallbackQuery, user_repo: UserRepository, user: User):
+async def open_settings(
+    callback: CallbackQuery,
+    user_repo: UserRepository,
+    user: User,
+) -> None:
     await callback.answer()
-    await callback.message.edit_text(
+    # Безопасный перевод UI на выбор языка через UIManager
+    await UIManager.show(
+        event=callback,
         text="👇 👇 👇 👇",
-        reply_markup=get_language_keyboard()
+        reply_markup=get_language_keyboard(),
+        message_id_to_edit=callback.message.message_id,
     )
 
 
 @client_main_router.callback_query(F.data.startswith("lang_"))
-async def select_language(callback: CallbackQuery, user_repo: UserRepository):
+async def select_language(
+    callback: CallbackQuery,
+    user_repo: UserRepository,
+) -> None:
     await callback.answer()
-    await user_repo.update_language(user_id=callback.from_user.id, language=callback.data.split('_')[-1])
+    lang_code = callback.data.split("_")[-1]
+
+    await user_repo.update_language(user_id=callback.from_user.id, language=lang_code)
     user = await user_repo.get_or_create_user(callback.from_user)
-    await callback.message.edit_text(
-        text=Locale(user.language).get_text('user_main'),
-        reply_markup=InlineKb(user.language).get_main_kb(orders=len(user.orders), cart=len(user.cart))
+
+    # При смене языка удаляем сообщение с выбором языка и рисуем главное меню с нуля,
+    # чтобы корректно отобразить медиа (photo_id), если оно есть в БД
+    if callback.message:
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
+
+    await show_client_main_menu(
+        event=callback,
+        user_repo=user_repo,
+        user=user,
+        message_id_to_edit=None,
     )
