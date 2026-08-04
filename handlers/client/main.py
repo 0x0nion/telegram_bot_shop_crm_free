@@ -80,11 +80,8 @@ async def open_main_menu(
 @client_main_router.callback_query(F.data.startswith("client_settings"))
 async def open_settings(
     callback: CallbackQuery,
-    user_repo: UserRepository,
-    user: User,
 ) -> None:
     await callback.answer()
-    # Безопасный перевод UI на выбор языка через UIManager
     await UIManager.show(
         event=callback,
         text="👇 👇 👇 👇",
@@ -104,8 +101,6 @@ async def select_language(
     await user_repo.update_language(user_id=callback.from_user.id, language=lang_code)
     user = await user_repo.get_or_create_user(callback.from_user)
 
-    # При смене языка удаляем сообщение с выбором языка и рисуем главное меню с нуля,
-    # чтобы корректно отобразить медиа (photo_id), если оно есть в БД
     if callback.message:
         try:
             await callback.message.delete()

@@ -2,10 +2,10 @@
 from typing import Union
 from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
-from aiogram.exceptions import TelegramBadRequest
 from database.repositories.user_repo import UserRepository
 from keyboards.inline import InlineKb
 from locales.locales import Locale
+from src.core.ui import UIManager
 
 
 async def render_cart(
@@ -13,13 +13,6 @@ async def render_cart(
         user_repo: UserRepository,
         state: FSMContext
 ):
-    bot = event.bot
-    chat_id = event.message.chat.id if isinstance(event, CallbackQuery) else event.chat.id
-    user_id = event.from_user.id
-
-    if isinstance(event, CallbackQuery):
-        await event.answer()
-
     user = await user_repo.get_or_create_user(event.from_user)
     lang = user.language if user else "en"
 
@@ -29,39 +22,29 @@ async def render_cart(
     state_data = await state.get_data()
     cart_msg_id = state_data.get("cart_message_id")
 
-    address = state_data.get("delivery_address")
-    comment = state_data.get("user_comment", "")
-
+    # Корзина пуста
     if not user or not user.cart:
         text = locale.get_text("cart_empty")
-
         orders_count = len(user.orders) if user and hasattr(user, "orders") else 0
-        main_kb = InlineKb(user.language).get_main_kb(orders=orders_count, cart=0)
+        main_kb = InlineKb(lang).get_main_kb(orders=orders_count, cart=0)
 
-        if cart_msg_id:
-            try:
-                await bot.edit_message_text(
-                    chat_id=chat_id,
-                    message_id=cart_msg_id,
-                    text=text,
-                    reply_markup=main_kb,
-                    parse_mode="HTML"
-                )
-                return
-            except TelegramBadRequest as e:
-                if "message is not modified" in str(e).lower():
-                    return
-                pass
-
-        new_msg = await bot.send_message(chat_id=chat_id, text=text, reply_markup=main_kb, parse_mode="HTML")
-        await state.update_data(cart_message_id=new_msg.message_id)
+        sent_msg = await UIManager.show(
+            event=event,
+            text=text,
+            reply_markup=main_kb,
+            message_id_to_edit=cart_msg_id
+        )
+        await state.update_data(cart_message_id=sent_msg.message_id)
         return
 
+    # Расчет содержимого корзины
+    address = state_data.get("delivery_address")
+    comment = state_data.get("user_comment", "")
     subtotal = sum(item.quantity * float(item.product.price) for item in user.cart)
 
     text_blocks = [locale.get_text("cart_title")]
-
     item_template = locale.get_text("cart_item_line")
+
     for item in user.cart:
         product_name = item.product.name if item.product else "Deleted Product"
         item_total = item.quantity * float(item.product.price)
@@ -75,10 +58,7 @@ async def render_cart(
 
     text_blocks.append(locale.get_text("cart_summary_subtotal").format(subtotal=subtotal))
 
-    if address:
-        addr_text = address
-    else:
-        addr_text = locale.get_text("cart_address_not_specified")
+    addr_text = address if address else locale.get_text("cart_address_not_specified")
     text_blocks.append(locale.get_text("cart_address_label").format(address=addr_text))
 
     comm_text = comment if comment else locale.get_text("cart_comment_not_specified")
@@ -87,26 +67,11 @@ async def render_cart(
     text = "".join(text_blocks)
     markup = kb_manager.get_cart_kb(cart_items=user.cart, has_address=bool(address))
 
-    if cart_msg_id:
-        try:
-            await bot.edit_message_text(
-                chat_id=chat_id,
-                message_id=cart_msg_id,
-                text=text,
-                reply_markup=markup,
-                parse_mode="HTML"
-            )
-            return
-        except TelegramBadRequest as e:
-            if "message is not modified" in str(e).lower():
-                return
-            pass
-
-    new_msg = await bot.send_message(
-        chat_id=chat_id,
+    # Отрисовка через UIManager и обновление cart_message_id в FSM
+    sent_msg = await UIManager.show(
+        event=event,
         text=text,
         reply_markup=markup,
-        parse_mode="HTML"
+        message_id_to_edit=cart_msg_id
     )
-    await state.update_data(cart_message_id=new_msg.message_id)
-
+    await state.update_data(cart_message_id=sent_msg.message_id)

@@ -2,13 +2,13 @@
 import logging
 
 from aiogram import Router, F
-from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery
 
 from database.models import User
 from database.repositories.user_repo import UserRepository
 from keyboards.inline import InlineKb
 from locales.locales import Locale
+from src.core.ui import UIManager
 
 logger = logging.getLogger(__name__)
 user_order_router = Router()
@@ -16,7 +16,6 @@ user_order_router = Router()
 
 @user_order_router.callback_query(F.data == "client_orders")
 async def show_pending_orders(callback: CallbackQuery, user_repo: UserRepository, user: User):
-    await callback.answer()
     user_id = callback.from_user.id
 
     locale = Locale(user.language)
@@ -31,16 +30,11 @@ async def show_pending_orders(callback: CallbackQuery, user_repo: UserRepository
         text = locale.get_text('user_active_orders_title')
         reply_markup = kb_manager.get_orders_kb(orders)
 
-    try:
-        await callback.message.edit_text(
-            text=text,
-            reply_markup=reply_markup
-        )
-    except TelegramBadRequest as e:
-        if "message is not modified" in e.message:
-            logger.info(f"User {user_id} double-clicked 'client_orders' (no changes).")
-        else:
-            raise
+    await UIManager.show(
+        event=callback,
+        text=text,
+        reply_markup=reply_markup
+    )
 
 
 @user_order_router.callback_query(F.data.startswith("view_details_order_"))
@@ -56,6 +50,8 @@ async def view_order_details(callback: CallbackQuery, user_repo: UserRepository)
     order = await user_repo.get_order_with_items(order_id, user_id)
 
     if not order:
+        # Для всплывающих уведомлений (show_alert) напрямую вызываем answer(),
+        # так как UIManager управляет отрисовкой сообщений в чате
         await callback.answer(
             text=locale.get_text("user_order_not_found"),
             show_alert=True
@@ -63,11 +59,10 @@ async def view_order_details(callback: CallbackQuery, user_repo: UserRepository)
         return
 
     text = locale.format_order(order, template_key="user_order_details")
-
     reply_markup = kb_manager.get_kb("back_to_orders")
 
-    await callback.message.edit_text(
+    await UIManager.show(
+        event=callback,
         text=text,
-        reply_markup=reply_markup,
+        reply_markup=reply_markup
     )
-    await callback.answer()

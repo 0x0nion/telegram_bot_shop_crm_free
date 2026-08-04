@@ -60,7 +60,6 @@ class UserLocaleMixin:
             lang_code=lang_code
         )
 
-        # Проверка валидности Telegram file_id или URL
         if photo_id and (not photo_id.startswith("http") and len(photo_id) < 10):
             photo_id = None
 
