@@ -1,9 +1,6 @@
 from typing import Generic, TypeVar, Type, Sequence, Any, Iterable
 from sqlalchemy import select, delete, func, exists, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.models.base import Base
-
-ModelType = TypeVar("ModelType", bound=Base)
 
 
 class BaseRepository(Generic[ModelType]):

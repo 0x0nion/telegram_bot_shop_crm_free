@@ -40,7 +40,7 @@ class DbSessionMiddleware(BaseMiddleware):
             data["admin_repo"] = admin_repo
             data["user_repo"] = user_repo
             data["shop_repo"] = shop_repo
-            data["admin_service"] = admin_shop_service
+            data["admin_service"] = admin_shop_service  # <-- Передаем в контекст хендлеров
 
             db_user = None
             if tg_user:
