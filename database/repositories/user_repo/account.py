@@ -1,43 +1,33 @@
-from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-
 from database.models.cart import CartItem
 from database.models.user import User
+from database.repositories.base_repo import BaseRepository
 from utils.logger import logger
 
 
 class UserAccountMixin:
 
+    @property
+    def _user_repo(self) -> BaseRepository[User]:
+        return BaseRepository(User, self.session)
+
     async def get_user(self, user_id: int) -> User | None:
-        result = await self.session.execute(select(User).where(User.id == user_id))
-        return result.scalar_one_or_none()
+        return await self._user_repo.get_by_id(user_id)
 
     async def get_user_with_cart(self, user_id: int) -> User | None:
-        stmt = (
-            select(User)
-            .options(
-                selectinload(User.cart).selectinload(CartItem.product),
-                selectinload(User.orders)
-            )
-            .where(User.id == user_id)
-            .execution_options(populate_existing=True)
-        )
-        result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
+        options = [
+            selectinload(User.cart).selectinload(CartItem.product),
+            selectinload(User.orders)
+        ]
+        return await self._user_repo.get_by_id(user_id, options=options)
 
     async def create_user(self, user_id: int) -> User:
         logger.info(f"Creating user id={user_id}")
-        user = User(id=user_id)
-        self.session.add(user)
-        await self.session.commit()
-        return user
+        return await self._user_repo.create(id=user_id)
 
     async def update_language(self, user_id: int, language: str) -> None:
         logger.info(f"Updating language for user id={user_id} to '{language}'")
-        user = await self.get_user(user_id)
-        if user:
-            user.language = language
-            await self.session.commit()
+        await self._user_repo.update(user_id, language=language)
 
     async def get_or_create_user(self, tg_user) -> User | None:
         """
@@ -48,7 +38,6 @@ class UserAccountMixin:
             return None
 
         user = await self.get_user_with_cart(tg_user.id)
-
         if not user:
             user = await self.create_user(user_id=tg_user.id)
 

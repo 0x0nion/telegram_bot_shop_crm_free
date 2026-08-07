@@ -1,4 +1,3 @@
-from database.repositories.base_repo import BaseRepository
 from database.repositories.user_repo.account import UserAccountMixin
 from database.repositories.user_repo.cart import UserCartMixin
 from database.repositories.user_repo.locales import UserLocaleMixin
@@ -9,7 +8,9 @@ class UserRepository(
     UserAccountMixin,
     UserCartMixin,
     UserOrderMixin,
-    UserLocaleMixin,
-    BaseRepository
+    UserLocaleMixin
 ):
-    pass
+    """Репозиторий для работы с аккаунтом пользователя, корзиной и заказами."""
+
+    def __init__(self, session):
+        self.session = session

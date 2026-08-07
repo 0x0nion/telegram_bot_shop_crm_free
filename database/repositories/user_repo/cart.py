@@ -1,53 +1,50 @@
-from sqlalchemy import select, and_
+from sqlalchemy import and_
 from sqlalchemy.orm import selectinload, joinedload
 
 from database.models.cart import CartItem
 from database.models.user import User
+from database.repositories.base_repo import BaseRepository
 from utils.logger import logger
 
 
 class UserCartMixin:
 
+    @property
+    def _cart_repo(self) -> BaseRepository[CartItem]:
+        return BaseRepository(CartItem, self.session)
+
+    @property
+    def _user_repo(self) -> BaseRepository[User]:
+        return BaseRepository(User, self.session)
+
     async def add_to_cart(self, user_id: int, product_id: int) -> None:
         logger.info(f"Adding product id={product_id} to cart for user id={user_id}")
-        stmt = select(CartItem).where(
-            and_(CartItem.user_id == user_id, CartItem.product_id == product_id)
+        cart_item = await self._cart_repo.get_one(
+            CartItem.user_id == user_id,
+            CartItem.product_id == product_id
         )
-        result = await self.session.execute(stmt)
-        cart_item = result.scalar_one_or_none()
 
         if cart_item:
-            cart_item.quantity += 1
+            await self._cart_repo.update(cart_item.id, quantity=cart_item.quantity + 1)
         else:
-            new_item = CartItem(user_id=user_id, product_id=product_id, quantity=1)
-            self.session.add(new_item)
+            await self._cart_repo.create(user_id=user_id, product_id=product_id, quantity=1)
 
-        await self.session.commit()
+    async def get_cart_with_products(self, user_id: int) -> User | None:
+        options = [selectinload(User.cart).joinedload(CartItem.product)]
+        return await self._user_repo.get_by_id(user_id, options=options)
 
-    async def get_cart_with_products(self, user_id: int):
-        stmt = (
-            select(User)
-            .options(selectinload(User.cart).joinedload(CartItem.product))
-            .where(User.id == user_id)
-        )
-        result = await self.session.execute(stmt)
-        user = result.scalar_one_or_none()
-        return user
-
-    async def update_cart_item(self, user_id: int, product_id: int, change: int):
+    async def update_cart_item(self, user_id: int, product_id: int, change: int) -> None:
         logger.info(f"Updating cart item product_id={product_id} for user id={user_id} with change={change}")
-        stmt = select(CartItem).where(
-            and_(CartItem.user_id == user_id, CartItem.product_id == product_id)
+        cart_item = await self._cart_repo.get_one(
+            CartItem.user_id == user_id,
+            CartItem.product_id == product_id
         )
-        result = await self.session.execute(stmt)
-        item = result.scalar_one_or_none()
 
-        if not item:
+        if not cart_item:
             return
 
-        item.quantity += change
-
-        if item.quantity <= 0:
-            await self.session.delete(item)
-
-        await self.session.commit()
+        new_quantity = cart_item.quantity + change
+        if new_quantity <= 0:
+            await self._cart_repo.delete_by_id(cart_item.id)
+        else:
+            await self._cart_repo.update(cart_item.id, quantity=new_quantity)

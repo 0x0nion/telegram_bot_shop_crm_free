@@ -1,18 +1,28 @@
-from sqlalchemy import select, and_, delete
+from sqlalchemy import and_
 from sqlalchemy.orm import selectinload, joinedload
 
 from database.models import OrderItem, Order
 from database.models.cart import CartItem
+from database.repositories.base_repo import BaseRepository
 from utils.logger import logger
 
 
 class UserOrderMixin:
 
-    async def create_order_from_cart(self, user_id: int, delivery_address: str | None = None,
-                                     user_comment: str | None = None) -> Order | None:
-        """
-        Атомарно переносит товары из корзины в заказ и очищает корзину.
-        """
+    @property
+    def _order_repo(self) -> BaseRepository[Order]:
+        return BaseRepository(Order, self.session)
+
+    @property
+    def _cart_repo(self) -> BaseRepository[CartItem]:
+        return BaseRepository(CartItem, self.session)
+
+    async def create_order_from_cart(
+            self,
+            user_id: int,
+            delivery_address: str | None = None,
+            user_comment: str | None = None
+    ) -> Order | None:
         logger.info(f"Creating order from cart for user id={user_id}")
         user = await self.get_cart_with_products(user_id)
 
@@ -34,7 +44,7 @@ class UserOrderMixin:
                 )
             )
 
-        new_order = Order(
+        new_order = await self._order_repo.create_without_commit(
             user_id=user_id,
             total_price=total_price,
             delivery_address=delivery_address,
@@ -42,56 +52,32 @@ class UserOrderMixin:
             status="pending",
             items=order_items
         )
-        self.session.add(new_order)
 
-        stmt = delete(CartItem).where(CartItem.user_id == user_id)
-        await self.session.execute(stmt)
-
+        # Очищаем корзину
+        await self._cart_repo.delete_where(CartItem.user_id == user_id)
         await self.session.commit()
 
-        stmt_select = (
-            select(Order)
-            .where(Order.id == new_order.id)
-            .options(
-                joinedload(Order.items).joinedload(OrderItem.product)
-            )
+        # Возвращаем созданный заказ со всеми объектами
+        return await self._order_repo.get_by_id(
+            new_order.id,
+            options=[joinedload(Order.items).joinedload(OrderItem.product)]
         )
-        result = await self.session.execute(stmt_select)
 
-        return result.unique().scalar_one_or_none()
-
-    async def get_pending_orders(self, user_id: int):
-        """
-        Возвращает список активных заказов пользователя (со статусом pending).
-        """
-        stmt = (
-            select(Order)
-            .where(
-                and_(
-                    Order.user_id == user_id,
-                    Order.status == "pending"
-                )
-            )
-            .order_by(Order.created_at.desc())
+    async def get_pending_orders(self, user_id: int) -> list[Order]:
+        return await self._order_repo.get_all(
+            and_(
+                Order.user_id == user_id,
+                Order.status == "pending"
+            ),
+            order_by=Order.created_at.desc()
         )
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all())
 
     async def get_order_with_items(self, order_id: int, user_id: int) -> Order | None:
-        """
-        Возвращает конкретный заказ пользователя со всеми вложенными товарами.
-        """
-        stmt = (
-            select(Order)
-            .options(
-                selectinload(Order.items).joinedload(OrderItem.product)
-            )
-            .where(
-                and_(
-                    Order.id == order_id,
-                    Order.user_id == user_id
-                )
-            )
+        options = [selectinload(Order.items).joinedload(OrderItem.product)]
+        return await self._order_repo.get_one(
+            and_(
+                Order.id == order_id,
+                Order.user_id == user_id
+            ),
+            options=options
         )
-        result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()

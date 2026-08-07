@@ -1,19 +1,18 @@
-from sqlalchemy import select
-
 from database.models.category import Category
+from database.repositories.base_repo import BaseRepository
 from utils.logger import logger
 
 
 class ShopCategoriesMixin:
 
+    @property
+    def _category_repo(self) -> BaseRepository[Category]:
+        return BaseRepository(Category, self.session)
+
     async def get_category_by_id(self, category_id: int) -> Category | None:
         logger.info(f"Fetching shop category id={category_id}")
-        query = select(Category).where(Category.id == category_id)
-        result = await self.session.execute(query)
-        return result.scalar_one_or_none()
+        return await self._category_repo.get_by_id(category_id)
 
-    async def get_categories_by_parent(self, parent_id: int | None = None) -> list:
+    async def get_categories_by_parent(self, parent_id: int | None = None) -> list[Category]:
         logger.info(f"Fetching shop categories by parent_id={parent_id}")
-        query = select(Category).where(Category.parent_id == parent_id)
-        result = await self.session.execute(query)
-        return list(result.scalars().all())
+        return await self._category_repo.get_all(Category.parent_id == parent_id)
