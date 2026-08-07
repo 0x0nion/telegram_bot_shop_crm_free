@@ -1,8 +1,7 @@
-# handlers/cart/__init__.py
+# handlers/client/cart/__init__.py
 from aiogram import Router
 
-from filters.admin import IsAdminFilter
-from handlers.cart.cart import user_cart_router
+from handlers.client.cart.cart import user_cart_router
 
 user_cart_group_router = Router()
 

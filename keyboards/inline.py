@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ def get_admin_keyboard() -> InlineKeyboardMarkup:
     builder.button(text="Работники", callback_data="admin_workers")
     builder.button(text="Рассылка", callback_data="admin_alert")
     builder.button(text="Статистика", callback_data="admin_stat")
-    builder.adjust(1,)
+    builder.adjust(1)
     return builder.as_markup()
 
 
@@ -169,7 +169,8 @@ class InlineKb:
             categories: list,
             products: list,
             current_cat_id: int | None,
-            parent_id: int | None
+            parent_id: int | None,
+            category_names: dict[int, str] | None = None,
     ) -> Optional[InlineKeyboardMarkup]:
         if self.template is None:
             logger.critical("[INLINE KB] Keyboards template is missing!")
@@ -188,11 +189,13 @@ class InlineKb:
         back_text = back_data.get(self.lang) or back_data.get("en") or "⬅️ Back"
         to_main_text = to_main_data.get(self.lang) or to_main_data.get("en") or "⬅️ Main Menu"
 
+        category_names = category_names or {}
         builder = InlineKeyboardBuilder()
 
         for category in categories:
+            cat_text = category_names.get(category.id, category.name)
             builder.row(
-                InlineKeyboardButton(text=f"{category.name}", callback_data=f"client_shop_{category.id}")
+                InlineKeyboardButton(text=f"{cat_text}", callback_data=f"client_shop_{category.id}")
             )
 
         for product in products:
@@ -294,4 +297,3 @@ class InlineKb:
         builder.row(InlineKeyboardButton(text=back_text, callback_data="client_main"))
 
         return builder.as_markup()
-

@@ -25,16 +25,13 @@ class UIManager:
         bot: Bot = event.bot
         chat_id = event.message.chat.id if isinstance(event, CallbackQuery) else event.chat.id
 
-        # Определяем ID сообщения для изменения
         msg_id = message_id_to_edit
         if not msg_id and isinstance(event, CallbackQuery):
             msg_id = event.message.message_id
 
         try:
-            # СЦЕНАРИЙ 1: Отрисовка с фото (карточки товаров, профили с картинками и т.д.)
             if photo:
                 if msg_id:
-                    # Telegram не умеет превращать текст в фото через edit, поэтому удаляем старое
                     try:
                         await bot.delete_message(chat_id, msg_id)
                     except TelegramBadRequest:
@@ -48,11 +45,9 @@ class UIManager:
                     parse_mode=parse_mode,
                 )
 
-            # СЦЕНАРИЙ 2: Обычное текстовое меню
             else:
                 if msg_id:
                     try:
-                        # Пробуем отредактировать существующее текстовое сообщение
                         return await bot.edit_message_text(
                             chat_id=chat_id,
                             message_id=msg_id,
@@ -64,7 +59,6 @@ class UIManager:
                         if "message is not modified" in str(e):
                             return event.message if isinstance(event, CallbackQuery) else event
 
-                        # Если раньше было фото, а теперь текст — edit упадет. Удаляем старое фото и шлем текст.
                         try:
                             await bot.delete_message(chat_id, msg_id)
                         except TelegramBadRequest:
@@ -84,7 +78,6 @@ class UIManager:
                     )
 
         finally:
-            # Всегда гасим «часики» на инлайн-кнопке
             if isinstance(event, CallbackQuery):
                 try:
                     await event.answer()
