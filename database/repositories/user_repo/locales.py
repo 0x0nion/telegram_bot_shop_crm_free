@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Optional, Sequence
+from sqlalchemy import or_
 from database.models.locales import LocaleText
 from database.repositories.base_repo import BaseRepository
 
@@ -17,43 +18,56 @@ class UserLocaleMixin:
             lang_code: str = "ru",
             default_lang: str = "ru"
     ) -> Optional[str]:
-        # 1. Поиск по основному языку
-        locale = await self._locale_repo.get_one(
+        """Получение одного текста с автоматическим фолбэком на язык по умолчанию."""
+        # Запрашиваем сразу и целевой, и дефолтный язык за 1 запрос
+        stmt_conditions = [
             LocaleText.entity_type == entity_type,
             LocaleText.entity_id == entity_id,
-            LocaleText.language_code == lang_code
-        )
-        if locale and locale.text:
-            return locale.text
+            LocaleText.language_code.in_([lang_code, default_lang])
+        ]
 
-        # 2. Фолбэк на дефолтный язык
-        if lang_code != default_lang:
-            fallback_locale = await self._locale_repo.get_one(
-                LocaleText.entity_type == entity_type,
-                LocaleText.entity_id == entity_id,
-                LocaleText.language_code == default_lang
-            )
-            if fallback_locale:
-                return fallback_locale.text
+        locales = await self._locale_repo.get_all(*stmt_conditions)
+        if not locales:
+            return None
 
-        return None
+        # Ищем совпадение по целевому языку
+        target_locale = next((loc for loc in locales if loc.language_code == lang_code), None)
+        if target_locale and target_locale.text:
+            return target_locale.text
+
+        # Фолбэк на дефолтный язык
+        fallback_locale = next((loc for loc in locales if loc.language_code == default_lang), None)
+        return fallback_locale.text if fallback_locale else None
 
     async def get_welcome_card(self, lang_code: str = "ru") -> tuple[str, Optional[str]]:
-        text = await self.get_locale_text(
-            entity_type="welcome_message",
-            entity_id=0,
-            lang_code=lang_code
-        )
-        if not text:
-            text = "👋 Добро пожаловать в наш магазин!"
-
-        photo_id = await self.get_locale_text(
-            entity_type="welcome_photo",
-            entity_id=0,
-            lang_code=lang_code
+        """
+        Загружает приветственный текст и фото за 1 эффективный запрос к БД.
+        """
+        # Запрашиваем сразу welcome_message и welcome_photo для обоих языков
+        locales = await self._locale_repo.get_all(
+            LocaleText.entity_type.in_(["welcome_message", "welcome_photo"]),
+            LocaleText.entity_id == 0,
+            LocaleText.language_code.in_([lang_code, "ru"])
         )
 
-        if photo_id and (not photo_id.startswith("http") and len(photo_id) < 10):
-            photo_id = None
+        # Функция-помощник для извлечения значения из полученного списка
+        def extract_text(entity_type: str) -> Optional[str]:
+            # Пробуем найти целевой язык
+            match = next((l for l in locales if l.entity_type == entity_type and l.language_code == lang_code), None)
+            if match and match.text:
+                return match.text
+            # Пробуем найти дефолтный язык (ru)
+            match_fallback = next((l for l in locales if l.entity_type == entity_type and l.language_code == "ru"),
+                                  None)
+            return match_fallback.text if match_fallback else None
+
+        text = extract_text("welcome_message") or "👋 Добро пожаловать в наш магазин!"
+        photo_id = extract_text("welcome_photo")
+
+        # Простая проверка: очищаем только пустые строки или явные пробелы
+        if photo_id:
+            photo_id = photo_id.strip()
+            if not photo_id:
+                photo_id = None
 
         return text, photo_id

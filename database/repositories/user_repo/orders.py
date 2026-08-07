@@ -18,10 +18,10 @@ class UserOrderMixin:
         return BaseRepository(CartItem, self.session)
 
     async def create_order_from_cart(
-            self,
-            user_id: int,
-            delivery_address: str | None = None,
-            user_comment: str | None = None
+        self,
+        user_id: int,
+        delivery_address: str | None = None,
+        user_comment: str | None = None
     ) -> Order | None:
         logger.info(f"Creating order from cart for user id={user_id}")
         user = await self.get_cart_with_products(user_id)
@@ -44,6 +44,7 @@ class UserOrderMixin:
                 )
             )
 
+        # 1. Создаем заказ без коммита
         new_order = await self._order_repo.create_without_commit(
             user_id=user_id,
             total_price=total_price,
@@ -53,14 +54,22 @@ class UserOrderMixin:
             items=order_items
         )
 
-        # Очищаем корзину
-        await self._cart_repo.delete_where(CartItem.user_id == user_id)
+        # 2. Очищаем элементы корзины через ORM-удаление объектов
+        # Это гарантирует, что SQLAlchemy применит изменения к объекту user.cart в памяти
+        for item in list(user.cart):
+            await self.session.delete(item)
+
+        # 3. Фиксируем транзакцию (заказ создан, корзина в БД и памяти очищена)
         await self.session.commit()
 
-        # Возвращаем созданный заказ со всеми объектами
+        # 4. Инвалидируем состояние юзера в сессии, чтобы при следующем запросе
+        # сессия гарантированно подгрузила пустую корзину из БД
+        self.session.expire(user)
+
+        # 5. Возвращаем созданный заказ со всеми объектами
         return await self._order_repo.get_by_id(
             new_order.id,
-            options=[joinedload(Order.items).joinedload(OrderItem.product)]
+            options=[selectinload(Order.items).joinedload(OrderItem.product)]
         )
 
     async def get_pending_orders(self, user_id: int) -> list[Order]:
@@ -69,6 +78,7 @@ class UserOrderMixin:
                 Order.user_id == user_id,
                 Order.status == "pending"
             ),
+            options=[selectinload(Order.items).joinedload(OrderItem.product)],
             order_by=Order.created_at.desc()
         )
 

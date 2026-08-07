@@ -1,4 +1,6 @@
+from typing import Any
 from sqlalchemy.orm import selectinload
+
 from database.models.cart import CartItem
 from database.models.user import User
 from database.repositories.base_repo import BaseRepository
@@ -23,16 +25,21 @@ class UserAccountMixin:
 
     async def create_user(self, user_id: int) -> User:
         logger.info(f"Creating user id={user_id}")
-        return await self._user_repo.create(id=user_id)
+        await self._user_repo.create(id=user_id)
+        # Гарантируем, что созданный юзер вернется с инициализированными связями
+        user = await self.get_user_with_cart(user_id)
+        return user if user else await self.get_user(user_id)
 
-    async def update_language(self, user_id: int, language: str) -> None:
+    async def update_language(self, user_id: int, language: str) -> User | None:
         logger.info(f"Updating language for user id={user_id} to '{language}'")
         await self._user_repo.update(user_id, language=language)
+        # Подтягиваем актуальный state после коммита
+        return await self.get_user_with_cart(user_id)
 
-    async def get_or_create_user(self, tg_user) -> User | None:
+    async def get_or_create_user(self, tg_user: Any) -> User | None:
         """
-        Получает пользователя со связанной корзиной.
-        Если его нет в БД — создает.
+        Получает пользователя со связанной корзиной и заказами.
+        Если его нет в БД — создает и сразу возвращает со всеми подгруженными связями.
         """
         if not tg_user:
             return None

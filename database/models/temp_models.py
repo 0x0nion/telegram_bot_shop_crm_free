@@ -1,4 +1,3 @@
-# database/models/temp_models.py
 from typing import Optional
 from sqlalchemy import String, Text, Numeric, BigInteger, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
@@ -14,6 +13,7 @@ class TempCategory(Base):
     original_id: Mapped[Optional[int]] = mapped_column(nullable=True)
     name: Mapped[str] = mapped_column(String(100))
     parent_id: Mapped[Optional[int]] = mapped_column(nullable=True)
+    is_active: Mapped[bool] = mapped_column(default=True, server_default="true", nullable=False)
     admin_id: Mapped[int] = mapped_column(BigInteger)
 
 
@@ -27,6 +27,7 @@ class TempProduct(Base):
     price: Mapped[float] = mapped_column(Numeric(10, 2))
     unit: Mapped[str] = mapped_column(String(20), default=DEFAULT_UNIT.value, nullable=False)
     image_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    is_active: Mapped[bool] = mapped_column(default=True, server_default="true", nullable=False)
     category_id: Mapped[Optional[int]] = mapped_column(nullable=True)
     admin_id: Mapped[int] = mapped_column(BigInteger)
 

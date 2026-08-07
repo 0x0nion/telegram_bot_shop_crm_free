@@ -1,5 +1,5 @@
-from typing import Generic, TypeVar, Type, Sequence, Any
-from sqlalchemy import select, delete, func, exists
+from typing import Generic, TypeVar, Type, Sequence, Any, Iterable
+from sqlalchemy import select, delete, func, exists, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.models.base import Base
 
@@ -8,20 +8,21 @@ ModelType = TypeVar("ModelType", bound=Base)
 
 class BaseRepository(Generic[ModelType]):
     """
-    Универсальный базовый репозиторий, реализующий стандартные CRUD-операции
-    над моделью SQLAlchemy 2.0.
+    Универсальный базовый репозиторий для SQLAlchemy 2.0.
     """
 
     def __init__(self, model: Type[ModelType], session: AsyncSession):
         self.model = model
         self.session = session
+        # Кэшируем названия колонок для безопасной проверки при update
+        self._column_names = set(inspect(model).mapper.column_attrs.keys())
 
     async def get_by_id(
         self,
         entity_id: Any,
         options: Sequence[Any] | None = None
     ) -> ModelType | None:
-        """Получить запись по ID c возможностью указания options (joinedload/selectinload)."""
+        """Получить запись по ID c поддержкой joinedload/selectinload."""
         stmt = select(self.model).where(self.model.id == entity_id)
         if options:
             stmt = stmt.options(*options)
@@ -33,7 +34,7 @@ class BaseRepository(Generic[ModelType]):
         *expressions: Any,
         options: Sequence[Any] | None = None
     ) -> ModelType | None:
-        """Получить одну запись по произвольным условиям фильтрации."""
+        """Получить одну запись по условиям."""
         stmt = select(self.model).where(*expressions)
         if options:
             stmt = stmt.options(*options)
@@ -48,7 +49,7 @@ class BaseRepository(Generic[ModelType]):
         limit: int | None = None,
         offset: int | None = None
     ) -> list[ModelType]:
-        """Получить список записей по фильтрам с поддержкой пагинации и сортировки."""
+        """Получить список записей."""
         stmt = select(self.model).where(*expressions)
         if options:
             stmt = stmt.options(*options)
@@ -66,31 +67,42 @@ class BaseRepository(Generic[ModelType]):
         return list(result.unique().scalars().all())
 
     async def create(self, **kwargs: Any) -> ModelType:
-        """Создать и вернуть новый экземпляр модели."""
+        """Создать экземпляр, закоммитить и обновить состояние объекта."""
         instance = self.model(**kwargs)
         self.session.add(instance)
         await self.session.commit()
+        await self.session.refresh(instance)
         return instance
 
     async def create_without_commit(self, **kwargs: Any) -> ModelType:
-        """Создать экземпляр и выполнить flush (без commit), чтобы получить сгенерированный ID."""
+        """Создать экземпляр и выполнить flush (без commit)."""
         instance = self.model(**kwargs)
         self.session.add(instance)
         await self.session.flush()
         return instance
+
+    async def create_many(self, instances_data: Iterable[dict[str, Any]]) -> list[ModelType]:
+        """Пакетное создание объектов."""
+        instances = [self.model(**data) for data in instances_data]
+        self.session.add_all(instances)
+        await self.session.commit()
+        return instances
 
     async def update(
         self,
         entity_id: Any,
         **kwargs: Any
     ) -> ModelType | None:
-        """Обновить поля существующей записи по ID."""
+        """
+        Безопасное обновление через ORM с обновлением состояния в памяти.
+        """
         instance = await self.get_by_id(entity_id)
         if instance:
             for key, value in kwargs.items():
-                if hasattr(instance, key):
+                if key in self._column_names:
                     setattr(instance, key, value)
             await self.session.commit()
+            await self.session.refresh(instance)
         return instance
 
     async def delete_by_id(self, entity_id: Any) -> bool:
@@ -101,14 +113,14 @@ class BaseRepository(Generic[ModelType]):
         return result.rowcount > 0
 
     async def delete_where(self, *expressions: Any) -> int:
-        """Удалить записи по произвольным условиям."""
+        """Удалить записи по условиям."""
         stmt = delete(self.model).where(*expressions)
         result = await self.session.execute(stmt)
         await self.session.commit()
         return result.rowcount
 
     async def exists(self, *expressions: Any) -> bool:
-        """Проверить существование записи по условиям."""
+        """Проверить существование записи."""
         stmt = select(exists().where(*expressions))
         result = await self.session.execute(stmt)
         return bool(result.scalar())
