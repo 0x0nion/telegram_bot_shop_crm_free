@@ -5,6 +5,10 @@ from database.models.base import Base
 
 ModelType = TypeVar("ModelType", bound=Base)
 
+from database.models.base import Base
+
+ModelType = TypeVar("ModelType", bound=Base)
+
 
 class BaseRepository(Generic[ModelType]):
     """
