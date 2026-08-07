@@ -1,6 +1,7 @@
+from sqlalchemy import select, delete
+
 from database.models import LocaleText
 from database.models.temp_models import TempLocaleText
-from database.repositories.base_repo import BaseRepository
 from utils.logger import logger
 
 
@@ -15,57 +16,58 @@ class AdminLocalesMixin:
             admin_id: int = None
     ) -> str | None:
         if use_temp:
-            repo = BaseRepository(TempLocaleText, self.session)
-            item = await repo.get_one(
+            query = select(TempLocaleText.text).where(
                 TempLocaleText.entity_id == entity_id,
                 TempLocaleText.entity_type == entity_type,
                 TempLocaleText.language_code == language_code,
                 TempLocaleText.admin_id == admin_id
             )
         else:
-            repo = BaseRepository(LocaleText, self.session)
-            item = await repo.get_one(
+            query = select(LocaleText.text).where(
                 LocaleText.entity_id == entity_id,
                 LocaleText.entity_type == entity_type,
                 LocaleText.language_code == language_code
             )
-        return item.text if item else None
+
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
 
     async def get_temp_locales(self, entity_id: int, entity_type: str, admin_id: int):
-        repo = BaseRepository(TempLocaleText, self.session)
-        return await repo.get_all(
-            TempLocaleText.entity_id == entity_id,
-            TempLocaleText.entity_type == entity_type,
-            TempLocaleText.admin_id == admin_id
+        result = await self.session.execute(
+            select(TempLocaleText).where(
+                TempLocaleText.entity_id == entity_id,
+                TempLocaleText.entity_type == entity_type,
+                TempLocaleText.admin_id == admin_id
+            )
         )
+        return result.scalars().all()
 
-    async def update_temp_locale(
-            self,
-            entity_id: int,
-            entity_type: str,
-            language_code: str,
-            text: str,
-            admin_id: int
-    ):
+    async def update_temp_locale(self, entity_id: int, entity_type: str,
+                                 language_code: str, text: str, admin_id: int):
         logger.debug(f"Updating temp locale for entity_id={entity_id}, type='{entity_type}', lang='{language_code}', admin_id={admin_id}")
-        repo = BaseRepository(TempLocaleText, self.session)
-        locale = await repo.get_one(
-            TempLocaleText.entity_id == entity_id,
-            TempLocaleText.entity_type == entity_type,
-            TempLocaleText.language_code == language_code,
-            TempLocaleText.admin_id == admin_id
+        result = await self.session.execute(
+            select(TempLocaleText).where(
+                TempLocaleText.entity_id == entity_id,
+                TempLocaleText.entity_type == entity_type,
+                TempLocaleText.language_code == language_code,
+                TempLocaleText.admin_id == admin_id
+            )
         )
+        locale = result.scalar_one_or_none()
 
         if locale:
-            await repo.update(locale.id, text=text)
+            locale.text = text
         else:
-            await repo.create(
+            new_locale = TempLocaleText(
                 entity_id=entity_id,
                 entity_type=entity_type,
                 language_code=language_code,
                 text=text,
                 admin_id=admin_id
             )
+            self.session.add(new_locale)
+
+        await self.session.commit()
 
     async def update_temp_locale_for_all_languages(
             self,
@@ -90,9 +92,11 @@ class AdminLocalesMixin:
             admin_id: int
     ):
         logger.info(f"Deleting temp locales for entity_id={entity_id}, type='{entity_type}', admin_id={admin_id}")
-        repo = BaseRepository(TempLocaleText, self.session)
-        await repo.delete_where(
-            TempLocaleText.entity_id == entity_id,
-            TempLocaleText.entity_type == entity_type,
-            TempLocaleText.admin_id == admin_id
+        await self.session.execute(
+            delete(TempLocaleText).where(
+                TempLocaleText.entity_id == entity_id,
+                TempLocaleText.entity_type == entity_type,
+                TempLocaleText.admin_id == admin_id
+            )
         )
+        await self.session.commit()
